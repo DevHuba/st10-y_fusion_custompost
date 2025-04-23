@@ -71,7 +71,6 @@ properties = {
   showSequenceNumbers: false, // show sequence numbers
   sequenceNumberStart: 10, // first sequence number
   sequenceNumberIncrement: 1, // increment for sequence numbers
-  optionalStop: true, // optional stop
   separateWordsWithSpace: true, // specifies that the words should be separated with a white space
   useRadius: false, // specifies that arcs should be output using the radius (R word) instead of the I, J, and K words.
   maximumSpindleSpeed: 2400, // specifies the maximum spindle speed
@@ -116,7 +115,6 @@ propertyDefinitions = {
   showSequenceNumbers: {title:"Use sequence numbers", description:"Use sequence numbers for each block of outputted code.", group:1, type:"boolean"},
   sequenceNumberStart: {title:"Start sequence number", description:"The number at which to start the sequence numbers.", group:1, type:"integer"},
   sequenceNumberIncrement: {title:"Sequence number increment", description:"The amount by which the sequence number is incremented by in each block.", group:1, type:"integer"},
-  optionalStop: {title:"Optional stop", description:"Outputs optional stop code during when necessary in the code.", type:"boolean"},
   separateWordsWithSpace: {title:"Separate words with space", description:"Adds spaces between words if 'yes' is selected.", type:"boolean"},
   useRadius: {title:"Radius arcs", description:"If yes is selected, arcs are outputted using radius values rather than IJK.", type:"boolean"},
   maximumSpindleSpeed: {title:"Max spindle speed", description:"Defines the maximum spindle speed allowed by your machines.", type:"integer", range:[0, 999999999]},
@@ -269,7 +267,9 @@ function getCode(code) {
     return cAxisEngageModal.format(154);
   case "DISENGAGE_C_AXIS":
     machineState.cAxisIsEngaged = false;
-    return cAxisEngageModal.format(155);
+    // C AXIS CUSTOM EDIT
+    // return cAxisEngageModal.format(155);  // original
+    return;
   case "POLAR_INTERPOLATION_ON":
     return gPolarModal.format(112);
   case "POLAR_INTERPOLATION_OFF":
@@ -780,25 +780,7 @@ function onOpen() {
     }
   }
 
-  // dump machine configuration
-  var vendor = machineConfiguration.getVendor();
-  var model = machineConfiguration.getModel();
-  var description = machineConfiguration.getDescription();
-
-  if (properties.writeMachine && (vendor || model || description)) {
-    writeComment(localize("Machine"));
-    if (vendor) {
-      writeComment("  " + localize("vendor") + ": " + vendor);
-    }
-    if (model) {
-      writeComment("  " + localize("model") + ": " + model);
-    }
-    if (description) {
-      writeComment("  " + localize("description") + ": "  + description);
-    }
-  }
-
-  // dump tool information
+  // DUMP TOOL LIST
   if (properties.writeTools) {
     var zRanges = {};
     if (is3D()) {
@@ -954,15 +936,6 @@ function onOpen() {
   if (properties.gotChipConveyor) {
     onCommand(COMMAND_START_CHIP_TRANSPORT);
   }
-
-  // if (gotYAxis) {
-  //   writeBlock(gFormat.format(53), gMotionModal.format(0), "Y" + yFormat.format(properties.g53HomePositionY)); // retract
-  // }
-  // writeBlock(gFormat.format(53), gMotionModal.format(0), "X" + xFormat.format(properties.g53HomePositionX)); // retract
-  // if (properties.gotSecondarySpindle) {
-  //   writeBlock(gFormat.format(53), gMotionModal.format(0), "B" + abcFormat.format(0)); // retract Sub Spindle if applicable
-  // }
-  // writeBlock(gFormat.format(53), gMotionModal.format(0), "Z" + zFormat.format(properties.g53HomePositionZ)); // retract
 
   // automatically eject part at end of program
   if (properties.autoEject) {
@@ -1546,11 +1519,6 @@ function onSection() {
     }
     retracted = insertToolCall;
 
-    if (!isFirstSection() && properties.optionalStop) {
-      skipBlock = !insertToolCall;
-      onCommand(COMMAND_OPTIONAL_STOP);
-    }
-
     /** Handle multiple turrets. */
     if (gotMultiTurret) {
       var activeTurret = tool.turret;
@@ -1594,7 +1562,6 @@ function onSection() {
         break;
       }
     }
-
     skipBlock = !insertToolCall;
     writeBlock("T" + toolFormat.format(tool.number * 100 + compensationOffset));
     if (tool.comment) {
@@ -3483,9 +3450,16 @@ function setCoolant(coolant) {
     m = getCode("COOLANT_OFF");
   }
   
+  //M8 WITH BLOCK DELETE
   if (m) {
-    skipBlock = optionalCoolant;
-    writeBlock(m);
+    // Добавляем символ / перед командой M8
+    if (m == mFormat.format(8)) {
+      skipBlock = true;
+      writeBlock(m);
+    } else {
+      skipBlock = optionalCoolant;
+      writeBlock(m);
+    }
     currentCoolantMode = coolant;
   }
 }
@@ -3695,10 +3669,11 @@ function onSectionEnd() {
     setPolarMode(false); // disable polar interpolation mode
   }
 
-  // cancel SFM mode to preserve spindle speed
-  if ((tool.getSpindleMode() == SPINDLE_CONSTANT_SURFACE_SPEED) && !machineState.stockTransferIsActive) {
-    startSpindle(true, getFramePosition(currentSection.getFinalPosition()));
-  }
+  // ORIGINAL
+  // // cancel SFM mode to preserve spindle speed
+  // if ((tool.getSpindleMode() == SPINDLE_CONSTANT_SURFACE_SPEED) && !machineState.stockTransferIsActive) {
+  //   startSpindle(true, getFramePosition(currentSection.getFinalPosition()));
+  // }
 
   if (properties.useG61) {
     writeBlock(gExactStopModal.format(64));
@@ -3724,6 +3699,31 @@ function onSectionEnd() {
     forceWorkPlane(); // needed since re-engage would result in undefined c-axis position
   }
   
+  // Определяем тип инструмента (живой или токарный)
+  var isLiveTool = currentSection.getType() == TYPE_MILLING;
+  
+  // Возвращаем оси в зависимости от типа инструмента
+  if (hasNextSection()) {
+    writeln("");
+    if (isLiveTool) {
+      writeComment("LIVE TOOL - RETURNING ALL AXES");
+      // Для живого инструмента возвращаем все оси Z, X, Y
+      if (gotYAxis) {
+        writeBlock(gFormat.format(53), gMotionModal.format(0), "Y" + yFormat.format(properties.g53HomePositionY)); // retract Y first
+      }
+      writeBlock(gFormat.format(53), gMotionModal.format(0), "X" + xFormat.format(properties.g53HomePositionX)); // retract X
+      writeBlock(gFormat.format(53), gMotionModal.format(0), "Z" + zFormat.format((currentSection.spindle == SPINDLE_SECONDARY) ? properties.g53HomePositionSubZ : properties.g53HomePositionZ)); // retract Z
+    } else {
+      writeComment("TURNING TOOL - RETURNING X AND Z AXES ONLY");
+      // Для обычного токарного инструмента возвращаем только оси X и Z
+      writeBlock(gFormat.format(53), gMotionModal.format(0), "X" + xFormat.format(properties.g53HomePositionX)); // retract X
+      writeBlock(gFormat.format(53), gMotionModal.format(0), "Z" + zFormat.format(currentSection.spindle == SPINDLE_SECONDARY ? properties.g53HomePositionSubZ : properties.g53HomePositionZ)); // retract Z
+    }
+    
+    // Добавляем опциональную остановку M1 в конце каждой операции
+    writeBlock(mFormat.format(1));
+  }
+  
   forceAny();
   forcePolarMode = false;
   partCutoff = false;
@@ -3739,6 +3739,8 @@ function onClose() {
   if (properties.gotChipConveyor) {
     onCommand(COMMAND_STOP_CHIP_TRANSPORT);
   }
+
+  // ORIGINAL
 
   if (getNumberOfSections() > 0) { // Retracting Z first causes safezone overtravel error to keep from crashing into subspindle. Z should already be retracted to and end of section.
     var section = getSection(getNumberOfSections() - 1);
@@ -3761,6 +3763,8 @@ function onClose() {
       writeBlock(getCode("STOP_SPINDLE"));
     }
   }
+
+
   if (machineState.tailstockIsActive) {
     writeBlock(getCode("TAILSTOCK_OFF"));
   }
@@ -3773,11 +3777,6 @@ function onClose() {
 
   if (ejectRoutine) {
     ejectPart();
-  }
-
-  if (gotYAxis) {
-    writeBlock(gFormat.format(53), gMotionModal.format(0), "Y" + yFormat.format(properties.g53HomePositionY));
-    yOutput.reset();
   }
 
   if (properties.useBarFeeder) {
@@ -3802,4 +3801,5 @@ function onClose() {
 }
 // <<<<< INCLUDED FROM ../common/haas lathe.cps
 
-properties.maximumSpindleSpeed = 6000;
+properties.maximumSpindleSpeed = 3000;
+
