@@ -423,6 +423,8 @@ function startSpindle(forceRPMMode, initialPosition, rpm) {
 
   gSpindleModeModal.reset();
   skipBlock = _skipBlock;
+
+  // G97
   if (useConstantSurfaceSpeed && !forceRPMMode) {
     writeBlock(getCode("CONSTANT_SURFACE_SPEED_ON"));
   } else {
@@ -481,22 +483,24 @@ function startSpindle(forceRPMMode, initialPosition, rpm) {
   }
 }
 
+// ORIGINAL G53 RETRACT
+
 /** Write retract in XY/Z. */
 function writeRetract(section, retractZ) {
   var _skipBlock = skipBlock;
   if (!isFirstSection()) {
     if (gotYAxis) {
-      skipBlock = _skipBlock;
-      writeBlock(gFormat.format(53), gMotionModal.format(0), "Y" + yFormat.format(properties.g53HomePositionY)); // retract
-      yOutput.reset();
+      // skipBlock = _skipBlock;
+      // writeBlock(gFormat.format(53), gMotionModal.format(0), "Y" + yFormat.format(properties.g53HomePositionY)); // retract
+      // yOutput.reset();
     }
-    skipBlock = _skipBlock;
-    writeBlock(gFormat.format(53), gMotionModal.format(0), "X" + xFormat.format(properties.g53HomePositionX)); // retract
-    xOutput.reset();
+    // skipBlock = _skipBlock;
+    // writeBlock(gFormat.format(53), gMotionModal.format(0), "X" + xFormat.format(properties.g53HomePositionX)); // retract
+    // xOutput.reset();
     if (retractZ) {
-      skipBlock = _skipBlock;
-      writeBlock(gFormat.format(53), gMotionModal.format(0), "Z" + zFormat.format((section.spindle == SPINDLE_SECONDARY) ? properties.g53HomePositionSubZ : properties.g53HomePositionZ)); // retract with regard to spindle
-      zOutput.reset();
+      // skipBlock = _skipBlock;
+      // writeBlock(gFormat.format(53), gMotionModal.format(0), "Z" + zFormat.format((section.spindle == SPINDLE_SECONDARY) ? properties.g53HomePositionSubZ : properties.g53HomePositionZ)); // retract with regard to spindle
+      // zOutput.reset();
     }
   }
 }
@@ -895,7 +899,7 @@ function onOpen() {
   writeComment("SAFE BLOCK on programm start");
   writeln("");
   writeBlock(gFormat.format(40), gFormat.format(80));
-  // writeBlock(getCode("FEED_MODE_UNIT_REVOLUTION"));  // FEED_MODE
+  writeBlock(getCode("FEED_MODE_UNIT_REV"));  // FEED_MODE G99
 
   // UNITS
   switch (unit) {
@@ -1632,12 +1636,16 @@ function onSection() {
     // select spindle if required
   }
 
+  // Режим подачи (G98/G99) выводим только для живого инструмента
   gFeedModeModal.reset();
-  if ((currentSection.feedMode == FEED_PER_REVOLUTION) || machineState.tapping || machineState.axialCenterDrilling) {
-    writeBlock(getCode("FEED_MODE_UNIT_REV")); // unit/rev
-  } else {
-    writeBlock(getCode("FEED_MODE_UNIT_MIN")); // unit/min
+  if (currentSection.getType() == TYPE_MILLING) { // Только для фрезерных операций (живой инструмент)
+    if ((currentSection.feedMode == FEED_PER_REVOLUTION) || machineState.tapping || machineState.axialCenterDrilling) {
+      writeBlock(getCode("FEED_MODE_UNIT_REV")); // unit/rev
+    } else {
+      writeBlock(getCode("FEED_MODE_UNIT_MIN")); // unit/min
+    }
   }
+  // Для токарных операций не выводим режим подачи, так как он уже подразумевается
 
   // Engage tailstock
   if (properties.useTailStock) {
@@ -3698,6 +3706,22 @@ function onSectionEnd() {
     writeBlock(getCode("DISENGAGE_C_AXIS")); // used for c-axis encoder reset
     forceWorkPlane(); // needed since re-engage would result in undefined c-axis position
   }
+
+  // Отключаем шпиндель
+  writeBlock(getCode("STOP_SPINDLE"));
+  // Выключаем СОЖ
+  onCommand(COMMAND_COOLANT_OFF);
+
+  // Режим подачи (G98/G99) выводим только для живого инструмента
+  gFeedModeModal.reset();
+  if (currentSection.getType() == TYPE_MILLING) { // Только для фрезерных операций (живой инструмент)
+    if ((currentSection.feedMode == FEED_PER_REVOLUTION) || machineState.tapping || machineState.axialCenterDrilling) {
+      writeBlock(getCode("FEED_MODE_UNIT_MIN")); // unit/min
+    } else {
+      writeBlock(getCode("FEED_MODE_UNIT_REV")); // unit/rev
+    }
+  }
+  // Для токарных операций не выводим режим подачи, так как он уже подразумевается
   
   // Определяем тип инструмента (живой или токарный)
   var isLiveTool = currentSection.getType() == TYPE_MILLING;
@@ -3706,15 +3730,13 @@ function onSectionEnd() {
   if (hasNextSection()) {
     writeln("");
     if (isLiveTool) {
-      writeComment("LIVE TOOL - RETURNING ALL AXES");
-      // Для живого инструмента возвращаем все оси Z, X, Y
+      // Для active tool возвращаем все оси Y, X, Z
       if (gotYAxis) {
         writeBlock(gFormat.format(53), gMotionModal.format(0), "Y" + yFormat.format(properties.g53HomePositionY)); // retract Y first
       }
       writeBlock(gFormat.format(53), gMotionModal.format(0), "X" + xFormat.format(properties.g53HomePositionX)); // retract X
       writeBlock(gFormat.format(53), gMotionModal.format(0), "Z" + zFormat.format((currentSection.spindle == SPINDLE_SECONDARY) ? properties.g53HomePositionSubZ : properties.g53HomePositionZ)); // retract Z
     } else {
-      writeComment("TURNING TOOL - RETURNING X AND Z AXES ONLY");
       // Для обычного токарного инструмента возвращаем только оси X и Z
       writeBlock(gFormat.format(53), gMotionModal.format(0), "X" + xFormat.format(properties.g53HomePositionX)); // retract X
       writeBlock(gFormat.format(53), gMotionModal.format(0), "Z" + zFormat.format(currentSection.spindle == SPINDLE_SECONDARY ? properties.g53HomePositionSubZ : properties.g53HomePositionZ)); // retract Z
@@ -3724,6 +3746,7 @@ function onSectionEnd() {
     writeBlock(mFormat.format(1));
   }
   
+  // Сбрасываем состояния для следующей операции
   forceAny();
   forcePolarMode = false;
   partCutoff = false;
@@ -3732,38 +3755,55 @@ function onSectionEnd() {
 function onClose() {
   writeln("");
 
+  // Отключаем шпиндель
+  writeBlock(getCode("STOP_SPINDLE"));
+  // Выключаем СОЖ
+  onCommand(COMMAND_COOLANT_OFF);
+
+  // Режим подачи (G98/G99) выводим только для живого инструмента
+  gFeedModeModal.reset();
+  if (currentSection.getType() == TYPE_MILLING) { // Только для фрезерных операций (живой инструмент)
+    if ((currentSection.feedMode == FEED_PER_REVOLUTION) || machineState.tapping || machineState.axialCenterDrilling) {
+      writeBlock(getCode("FEED_MODE_UNIT_MIN")); // unit/min
+    } else {
+      writeBlock(getCode("FEED_MODE_UNIT_REV")); // unit/rev
+    }
+  }
+  // Для токарных операций не выводим режим подачи, так как он уже подразумевается
+
   optionalSection = false;
 
-  onCommand(COMMAND_COOLANT_OFF);
 
   if (properties.gotChipConveyor) {
     onCommand(COMMAND_STOP_CHIP_TRANSPORT);
   }
 
-  // ORIGINAL
-
-  if (getNumberOfSections() > 0) { // Retracting Z first causes safezone overtravel error to keep from crashing into subspindle. Z should already be retracted to and end of section.
+  if (getNumberOfSections() > 0) {
     var section = getSection(getNumberOfSections() - 1);
-    if ((section.getType() != TYPE_TURNING) && isSameDirection(section.workPlane.forward, new Vector(0, 0, 1))) {
-      writeBlock(gFormat.format(53), gMotionModal.format(0), "X" + xFormat.format(properties.g53HomePositionX), conditional(gotYAxis, "Y" + yFormat.format(properties.g53HomePositionY))); // retract
-      xOutput.reset();
-      yOutput.reset();
-      writeBlock(gFormat.format(53), gMotionModal.format(0), "Z" + zFormat.format((currentSection.spindle == SPINDLE_SECONDARY) ? properties.g53HomePositionSubZ : properties.g53HomePositionZ)); // retract
-      zOutput.reset();
-      writeBlock(getCode("STOP_SPINDLE"));
-    } else {
+    var isLiveTool = (section.getType() != TYPE_TURNING);
+    
+    // Финальный возврат в домашнюю позицию выполняется только один раз
+    if (isLiveTool) {
+      // Для живого инструмента возвращаем все оси Y, X, Z
       if (gotYAxis) {
-        writeBlock(gFormat.format(53), gMotionModal.format(0), "Y" + yFormat.format(properties.g53HomePositionY)); // retract
+        writeBlock(gFormat.format(53), gMotionModal.format(0), "Y" + yFormat.format(properties.g53HomePositionY)); // retract Y first
       }
-      writeBlock(gFormat.format(53), gMotionModal.format(0), "X" + xFormat.format(properties.g53HomePositionX)); // retract
-      xOutput.reset();
-      yOutput.reset();
-      writeBlock(gFormat.format(53), gMotionModal.format(0), "Z" + zFormat.format(currentSection.spindle == SPINDLE_SECONDARY ? properties.g53HomePositionSubZ : properties.g53HomePositionZ)); // retract
-      zOutput.reset();
-      writeBlock(getCode("STOP_SPINDLE"));
+      writeBlock(gFormat.format(53), gMotionModal.format(0), "X" + xFormat.format(properties.g53HomePositionX)); // retract X
+      writeBlock(gFormat.format(53), gMotionModal.format(0), "Z" + zFormat.format((section.spindle == SPINDLE_SECONDARY) ? properties.g53HomePositionSubZ : properties.g53HomePositionZ)); // retract Z
+    } else {
+      // Для обычного токарного инструмента возвращаем только оси X и Z
+      writeBlock(gFormat.format(53), gMotionModal.format(0), "X" + xFormat.format(properties.g53HomePositionX)); // retract X
+      writeBlock(gFormat.format(53), gMotionModal.format(0), "Z" + zFormat.format(section.spindle == SPINDLE_SECONDARY ? properties.g53HomePositionSubZ : properties.g53HomePositionZ)); // retract Z
     }
+    
+    // Сбрасываем выходы
+    xOutput.reset();
+    if (gotYAxis) {
+      yOutput.reset();
+    }
+    zOutput.reset();
+    
   }
-
 
   if (machineState.tailstockIsActive) {
     writeBlock(getCode("TAILSTOCK_OFF"));
@@ -3782,14 +3822,15 @@ function onClose() {
   if (properties.useBarFeeder) {
     writeln("");
     writeComment(localize("Bar feed"));
-    // feed bar here
-    // writeBlock(gFormat.format(53), gMotionModal.format(0), "X" + xFormat.format(properties.g53HomePositionX));
     writeBlock(gFormat.format(105));
   }
 
   writeln("");
   onImpliedCommand(COMMAND_END);
-  onImpliedCommand(COMMAND_STOP_SPINDLE);
+
+  // ORIGINAL
+  // onImpliedCommand(COMMAND_STOP_SPINDLE);
+
   if (properties.looping) {
     writeBlock(mFormat.format(99));
   } else if (true /*!properties.useM97*/) {
