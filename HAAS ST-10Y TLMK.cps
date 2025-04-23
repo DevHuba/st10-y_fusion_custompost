@@ -105,8 +105,6 @@ properties = {
   enableVariables: false, // enables use of variables in the program, use G56 for variables
   
   // Detail length settings
-  detailLengthSafeDistance: 5, // safety distance to add to detail length (mm)
-  cuttingToolWidth: 3, // width of the cutting tool (mm)
   useDetailLengthCalculation: false, // enable calculation of detail length for Z-axis
 };
 
@@ -151,8 +149,6 @@ propertyDefinitions = {
   enableVariables: {title:"Enable variables", description:"Enable to use variables in the program. Requires G56 for variables.", type:"boolean", group:6},
   
   // Detail length settings
-  detailLengthSafeDistance: {title:"Detail length safe distance", description:"Safety distance to add to detail length in mm.", type:"spatial", group:6},
-  cuttingToolWidth: {title:"Cutting tool width", description:"Width of the cutting tool in mm.", type:"spatial", group:6},
   useDetailLengthCalculation: {title:"Use detail length calculation", description:"Enable to use detail length calculation for Z-axis with G52.", type:"boolean", group:6}
 };
 
@@ -865,29 +861,37 @@ function onOpen() {
   // Handle variables and G52 for detail length calculation 
   if (properties.useDetailLengthCalculation) {
     if (!properties.enableVariables) {
-      writeComment("WARNING: Detail length calculation requires variables to be enabled");
       properties.enableVariables = true;
     }
+    
+    // Получаем размеры заготовки
+    var workpiece = getWorkpiece();
+    if (!workpiece) {
+      error("Workpiece is not defined. Cannot generate code without workpiece information.");
+      return;
+    }
+    
+    // Непосредственно используем координаты Z заготовки
+    var modelLength = Math.abs(workpiece.upper.z - workpiece.lower.z);
+    
+    writeln("");
+    writeComment("WORKPIECE DIMENSIONS:");
+    writeln("");
+    writeComment("Check Z length : DET. LENGTH + SAFE DIST + CUT TOOL WIDTH ( apc. 10mm )");
+    writeComment("Z length: " + xyzFormat.format(modelLength) + " mm");
+    writeln("");
     
     // Use G56 for variables as specified in the requirement
     writeBlock(gFormat.format(56));
     
-    // Calculate total offset for G52
-    // #100 = detail length safe distance (mm)
-    // #101 = cutting tool width (mm)
-    // #102 = total Z offset
-    writeComment("DETAIL LENGTH CALCULATION");
-    writeBlock("#100 = " + xyzFormat.format(properties.detailLengthSafeDistance));
-    writeBlock("#101 = " + xyzFormat.format(properties.cuttingToolWidth));
-    writeBlock("#102 = #100 + #101 + 1"); // Safe distance + tool width + 1mm as specified
+    // Сохраняем длину заготовки в переменной #100
+    writeln("");
+    writeComment("LOCAL VARIABLES");
+    writeln("");
+    writeBlock("#100 = " + xyzFormat.format(modelLength)); // Длина заготовки
     
-    var totalOffset = properties.detailLengthSafeDistance + properties.cuttingToolWidth + 1;
-    writeComment("Total Z-axis offset: " + xyzFormat.format(totalOffset) + "mm (Safe distance: " + 
-                xyzFormat.format(properties.detailLengthSafeDistance) + "mm + Tool width: " + 
-                xyzFormat.format(properties.cuttingToolWidth) + "mm + 1mm)");
-    
-    // Apply G52 with the calculated value to offset the part in Z-axis
-    writeBlock(gFormat.format(52), "Z-#102");
+    // Apply G52 with the workpiece length
+    writeBlock(gFormat.format(52), "Z#100");
   }
 
   // Probing Surface Inspection
@@ -904,9 +908,14 @@ function onOpen() {
     }
   }
 
-  // absolute coordinates and feed per min
-  writeBlock(getCode("FEED_MODE_UNIT_MIN"), gPlaneModal.format(18));
+  // SAFE BLOCK on programm start
+  writeln("");
+  writeComment("SAFE BLOCK on programm start");
+  writeln("");
+  writeBlock(gFormat.format(40), gFormat.format(80));
+  // writeBlock(getCode("FEED_MODE_UNIT_REVOLUTION"));  // FEED_MODE
 
+  // UNITS
   switch (unit) {
   case IN:
     writeBlock(gUnitModal.format(20));
@@ -946,14 +955,14 @@ function onOpen() {
     onCommand(COMMAND_START_CHIP_TRANSPORT);
   }
 
-  if (gotYAxis) {
-    writeBlock(gFormat.format(53), gMotionModal.format(0), "Y" + yFormat.format(properties.g53HomePositionY)); // retract
-  }
-  writeBlock(gFormat.format(53), gMotionModal.format(0), "X" + xFormat.format(properties.g53HomePositionX)); // retract
-  if (properties.gotSecondarySpindle) {
-    writeBlock(gFormat.format(53), gMotionModal.format(0), "B" + abcFormat.format(0)); // retract Sub Spindle if applicable
-  }
-  writeBlock(gFormat.format(53), gMotionModal.format(0), "Z" + zFormat.format(properties.g53HomePositionZ)); // retract
+  // if (gotYAxis) {
+  //   writeBlock(gFormat.format(53), gMotionModal.format(0), "Y" + yFormat.format(properties.g53HomePositionY)); // retract
+  // }
+  // writeBlock(gFormat.format(53), gMotionModal.format(0), "X" + xFormat.format(properties.g53HomePositionX)); // retract
+  // if (properties.gotSecondarySpindle) {
+  //   writeBlock(gFormat.format(53), gMotionModal.format(0), "B" + abcFormat.format(0)); // retract Sub Spindle if applicable
+  // }
+  // writeBlock(gFormat.format(53), gMotionModal.format(0), "Z" + zFormat.format(properties.g53HomePositionZ)); // retract
 
   // automatically eject part at end of program
   if (properties.autoEject) {
