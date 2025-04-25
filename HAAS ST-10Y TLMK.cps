@@ -10,7 +10,7 @@
   FORKID {14D60AD3-4366-49dc-939C-4DB5EA48FF68}
 */
 
-description = "HAAS ST-10Y";
+description = "HAAS ST-10Y TLMK VERSION";
 
 var gotYAxis = true;
 var yAxisMinimum = toPreciseUnit(gotYAxis ? -50.8 : 0, MM); // specifies the minimum range for the Y-axis
@@ -416,19 +416,23 @@ function startSpindle(forceRPMMode, initialPosition, rpm) {
 
   var useConstantSurfaceSpeed = currentSection.getTool().getSpindleMode() == SPINDLE_CONSTANT_SURFACE_SPEED;
   var maximumSpindleSpeed = (tool.maximumSpindleSpeed > 0) ? Math.min(tool.maximumSpindleSpeed, properties.maximumSpindleSpeed) : properties.maximumSpindleSpeed;
-  if (useConstantSurfaceSpeed && !forceRPMMode) {
-    skipBlock = _skipBlock;
-    writeBlock(gFormat.format(50), sOutput.format(maximumSpindleSpeed));
-  }
+  
+
+  // ORIGINAL CODE G50 S.... befor cutting
+
+  // if (useConstantSurfaceSpeed && !forceRPMMode) {
+  //   skipBlock = _skipBlock;
+  //   writeBlock(gFormat.format(50), sOutput.format(maximumSpindleSpeed));
+  // }
 
   gSpindleModeModal.reset();
   skipBlock = _skipBlock;
 
-  // G97
-  if (useConstantSurfaceSpeed && !forceRPMMode) {
-    writeBlock(getCode("CONSTANT_SURFACE_SPEED_ON"));
+  // G97/G96
+  if (machineState.axialCenterDrilling || currentSection.getType() == TYPE_MILLING) {
+    writeBlock(getCode("CONSTANT_SURFACE_SPEED_OFF")); // G97 for drilling and live tools
   } else {
-    writeBlock(getCode("CONSTANT_SURFACE_SPEED_OFF"));
+    writeBlock(getCode("CONSTANT_SURFACE_SPEED_ON")); // G96 for turning operations
   }
 
   _spindleSpeed = useConstantSurfaceSpeed ? tool.surfaceSpeed * ((unit == MM) ? 1 / 1000.0 : 1 / 12.0) : _spindleSpeed;
@@ -439,41 +443,49 @@ function startSpindle(forceRPMMode, initialPosition, rpm) {
       _spindleSpeed = Math.min((_spindleSpeed * ((unit == MM) ? 1000.0 : 12.0) / (Math.PI * Math.abs(initialPosition.x * 2))), maximumSpindleSpeed);
     }
   }
-  switch (currentSection.spindle) {
-  case SPINDLE_PRIMARY: // main spindle
-    if (machineState.isTurningOperation || machineState.axialCenterDrilling) { // turning main spindle
-      skipBlock = _skipBlock;
-      writeBlock(
-        sOutput.format(_spindleSpeed),
-        conditional(!machineState.tapping, tool.clockwise ? getCode("START_MAIN_SPINDLE_CW") : getCode("START_MAIN_SPINDLE_CCW"))
-      );
-    } else { // milling main spindle
-      skipBlock = _skipBlock;
-      writeBlock(
-        (machineState.tapping ? sOutput.format(spindleSpeed) : pOutput.format(_spindleSpeed)),
-        conditional(!machineState.tapping, tool.clockwise ? getCode("START_LIVE_TOOL_CW") : getCode("START_LIVE_TOOL_CCW"))
-      );
-    }
-    break;
-  case SPINDLE_SECONDARY: // sub spindle
-    if (!properties.gotSecondarySpindle) {
-      error(localize("Secondary spindle is not available."));
-      return;
-    }
-    if (machineState.isTurningOperation || machineState.axialCenterDrilling) { // turning sub spindle
-      // use could also swap spindles using G14/G15
-      gSpindleModeModal.reset();
-      skipBlock = _skipBlock;
-      writeBlock(
-        sOutput.format(_spindleSpeed),
-        conditional(!machineState.tapping, tool.clockwise ? getCode("START_SUB_SPINDLE_CW") : getCode("START_SUB_SPINDLE_CCW"))
-      );
-    } else { // milling sub spindle
-      skipBlock = _skipBlock;
-      writeBlock(pOutput.format(_spindleSpeed), tool.clockwise ? getCode("START_LIVE_TOOL_CW") : getCode("START_LIVE_TOOL_CCW"));
-    }
-    break;
-  }
+
+  // ORIGINAL CODE G97 S... M3/M4
+
+
+  // switch (currentSection.spindle) {
+  // case SPINDLE_PRIMARY: // main spindle
+  //   if (machineState.isTurningOperation || machineState.axialCenterDrilling) { // turning main spindle
+  //     skipBlock = _skipBlock;
+  //     writeBlock(
+  //       sOutput.format(_spindleSpeed),
+  //       conditional(!machineState.tapping, tool.clockwise ? getCode("START_MAIN_SPINDLE_CW") : getCode("START_MAIN_SPINDLE_CCW"))
+  //     );
+  //   } else { // milling main spindle
+  //     skipBlock = _skipBlock;
+  //     writeBlock(
+  //       (machineState.tapping ? sOutput.format(spindleSpeed) : pOutput.format(_spindleSpeed)),
+  //       conditional(!machineState.tapping, tool.clockwise ? getCode("START_LIVE_TOOL_CW") : getCode("START_LIVE_TOOL_CCW"))
+  //     );
+  //   }
+  //   break;
+  // case SPINDLE_SECONDARY: // sub spindle
+  //   if (!properties.gotSecondarySpindle) {
+  //     error(localize("Secondary spindle is not available."));
+  //     return;
+  //   }
+  //   if (machineState.isTurningOperation || machineState.axialCenterDrilling) { // turning sub spindle
+  //     // use could also swap spindles using G14/G15
+  //     gSpindleModeModal.reset();
+  //     skipBlock = _skipBlock;
+  //     writeBlock(
+  //       sOutput.format(_spindleSpeed),
+  //       conditional(!machineState.tapping, tool.clockwise ? getCode("START_SUB_SPINDLE_CW") : getCode("START_SUB_SPINDLE_CCW"))
+  //     );
+  //   } else { // milling sub spindle
+  //     skipBlock = _skipBlock;
+  //     writeBlock(pOutput.format(_spindleSpeed), tool.clockwise ? getCode("START_LIVE_TOOL_CW") : getCode("START_LIVE_TOOL_CCW"));
+  //   }
+  //   break;
+  // }
+
+
+
+
 
   if (properties.useSSV) {
     if (machineState.isTurningOperation && hasParameter("operation-strategy") && getParameter("operation-strategy") != "turningThread") {
@@ -1619,7 +1631,7 @@ function onSection() {
   if (!machineState.stockTransferIsActive) {
     if (machineState.isTurningOperation || machineState.axialCenterDrilling) {
       skipBlock = !insertToolCall  && (machineState.cAxisIsEngaged != undefined);
-      writeBlock(conditional(machineState.cAxisIsEngaged || machineState.cAxisIsEngaged == undefined), getCode("DISENGAGE_C_AXIS"));
+      // writeBlock(conditional(machineState.cAxisIsEngaged || machineState.cAxisIsEngaged == undefined), getCode("DISENGAGE_C_AXIS"));
     } else { // milling
       writeBlock(conditional(!machineState.cAxisIsEngaged || machineState.cAxisIsEngaged == undefined), getCode("ENGAGE_C_AXIS"));
     }
@@ -3700,11 +3712,19 @@ function onSectionEnd() {
     } else {
       writeBlock(getCode("STOP_SPINDLE"));
     }
+
+    // CUSTOM CODE M155 disangage c-axis
+    writeBlock(mFormat.format(155));
   }
   
   if (machineState.cAxisIsEngaged && !properties.optimizeCAxisSelect) {
     writeBlock(getCode("DISENGAGE_C_AXIS")); // used for c-axis encoder reset
     forceWorkPlane(); // needed since re-engage would result in undefined c-axis position
+  }
+  
+  // Проверяем, является ли инструмент живым
+  if (currentSection.getType() == TYPE_MILLING) {
+    writeBlock(getCode("DISENGAGE_C_AXIS")); // Отключаем C-ось для живого инструмента
   }
 
   // Отключаем шпиндель
