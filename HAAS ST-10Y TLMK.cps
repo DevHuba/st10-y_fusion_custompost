@@ -871,12 +871,13 @@ function onOpen() {
     
     // Непосредственно используем координаты Z заготовки
     var modelLength = Math.abs(workpiece.upper.z - workpiece.lower.z);
+    var int = 1.0
     
     writeln("");
     writeComment("WORKPIECE DIMENSIONS:");
     writeln("");
     writeComment("Check Z length : DET. LENGTH + SAFE DIST + CUT TOOL WIDTH ( apc. 10mm )");
-    writeComment("Z length: " + xyzFormat.format(modelLength) + " mm");
+    writeComment("Z length: " + xyzFormat.format(modelLength + 1) + " mm");
     writeln("");
     
     // Use G56 for variables as specified in the requirement
@@ -910,8 +911,9 @@ function onOpen() {
   writeln("");
   writeComment("SAFE BLOCK on programm start");
   writeln("");
-  writeBlock(gFormat.format(40), gFormat.format(80));
-  writeBlock(getCode("FEED_MODE_UNIT_REV"));  // FEED_MODE G99
+
+  //CUSTOM CODE G40 , G80 , G99 , G18 - turning plane
+  writeBlock(gFormat.format(40), gFormat.format(80), getCode("FEED_MODE_UNIT_REV"), gFormat.format(18));
 
   // UNITS
   switch (unit) {
@@ -946,6 +948,7 @@ function onOpen() {
     }
   }
 
+  //ORIGINAL CODE SPINDLE SPEED
   writeBlock(gFormat.format(50), sOutput.format(properties.maximumSpindleSpeed));
   sOutput.reset();
 
@@ -1396,6 +1399,7 @@ function setSpindleOrientationTurning(section) {
 var bAxisOrientationTurning = new Vector(0, 0, 0);
 
 function onSection() {
+
   // Detect machine configuration
   machineConfiguration = (currentSection.spindle == SPINDLE_PRIMARY) ? machineConfigurationMainSpindle : machineConfigurationSubSpindle;
   if (!gotBAxis) {
@@ -1486,6 +1490,7 @@ function onSection() {
     writeBlock(ssvModal.format(39));
   }
 
+
   writeln("");
 
   /*
@@ -1499,6 +1504,9 @@ function onSection() {
     machineState.stockTransferIsActive = false;
   }
   
+
+  //ORIGINAL CODE OPERATION COMMENT
+  
   if (hasParameter("operation-comment")) {
     var comment = getParameter("operation-comment");
     if (comment) {
@@ -1510,6 +1518,8 @@ function onSection() {
     skipBlock = true;
     writeRetract(currentSection, true); // retract in Z also
   }
+
+  //ORIGINAL CODE NOTES
 
   if (properties.showNotes && hasParameter("notes")) {
     var notes = getParameter("notes");
@@ -1578,6 +1588,9 @@ function onSection() {
         break;
       }
     }
+
+    //ORIGINAL CODE TOOL CHANGE
+
     skipBlock = !insertToolCall;
     writeBlock("T" + toolFormat.format(tool.number * 100 + compensationOffset));
     if (tool.comment) {
@@ -1711,8 +1724,15 @@ function onSection() {
   forceAny();
   gMotionModal.reset();
 
+
+  //MODIFIED CODE PLANE
+
   gPlaneModal.reset();
-  writeBlock(gPlaneModal.format(getPlane()));
+  if (currentSection.getType() == TYPE_MILLING) { // check if active tool
+    writeBlock(gPlaneModal.format(getPlane())); // take plane for milling
+  } else {
+    // writeBlock(gPlaneModal.format(18)); // is in program start
+  }
   
   var abc = new Vector(0, 0, 0);
   if (machineConfiguration.isMultiAxisConfiguration()) {
@@ -3500,6 +3520,8 @@ function onCommand(command) {
         writeBlock(tool.clockwise ? getCode("START_SUB_SPINDLE_CW") : getCode("START_SUB_SPINDLE_CCW"));
       }
     } else {
+
+      // TODO: ADD HERE CHECK FOR RADIAL TOOL
       writeBlock(tool.clockwise ? getCode("START_LIVE_TOOL_CW") : getCode("START_LIVE_TOOL_CCW"));
     }
     break;
@@ -3770,6 +3792,10 @@ function onSectionEnd() {
   forceAny();
   forcePolarMode = false;
   partCutoff = false;
+
+
+  writeln("");
+
 }
 
 function onClose() {
