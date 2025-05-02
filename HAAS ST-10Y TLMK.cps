@@ -430,7 +430,8 @@ function startSpindle(forceRPMMode, initialPosition, rpm) {
 
   // G97/G96
   if (machineState.axialCenterDrilling || currentSection.getType() == TYPE_MILLING) {
-    writeBlock(getCode("CONSTANT_SURFACE_SPEED_OFF")); // G97 for drilling and live tools
+    // TODO: Add here check for z axis on tool and machine to check if it is radial or axial tool
+    writeBlock(getCode("CONSTANT_SURFACE_SPEED_OFF"), sOutput.format(_spindleSpeed), tool.clockwise ? getCode("START_LIVE_TOOL_CW") : getCode("START_LIVE_TOOL_CCW")); // G97 for drilling and live tools
   } else {
     writeBlock(getCode("CONSTANT_SURFACE_SPEED_ON")); // G96 for turning operations
   }
@@ -3709,6 +3710,18 @@ function onSectionEnd() {
 
   if (machineState.usePolarMode) {
     setPolarMode(false); // disable polar interpolation mode
+  }
+
+  // CUSTOM CODE STOP SPINDLE M5 , M135 , M145
+
+  if (currentSection.getType() == TYPE_MILLING && ((currentSection.feedMode == FEED_PER_MINUTE) || machineState.tapping || machineState.axialCenterDrilling)) {
+    writeBlock(mFormat.format(135))
+  } else if (currentSection.getType() == TYPE_TURNING) {  // для токарных операций
+    writeBlock(mFormat.format(5));
+  } else if (machineState.subSpindleIsActive) {
+    writeBlock(mFormat.format(145));
+  } else {
+    writeBlock("undefined tool");
   }
 
   // ORIGINAL
