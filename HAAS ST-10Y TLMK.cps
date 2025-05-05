@@ -64,9 +64,9 @@ highFeedrate = (unit == IN) ? 470 : 12000;
 
 // user-defined properties
 properties = {
-  writeMachine: false, // write machine
-  writeTools: false, // writes the tools
-  writeVersion: false, // include version info
+  // writeMachine: false, // write machine
+  // writeTools: false, // writes the tools
+  // writeVersion: false, // include version info
   // preloadTool: false, // preloads next tool on tool change if any
   showSequenceNumbers: false, // show sequence numbers
   sequenceNumberStart: 10, // first sequence number
@@ -101,17 +101,19 @@ properties = {
   safeStartAllOperations: false, // write optional blocks at the beginning of all operations that include all commands to start program
   
   // Variables settings
-  enableVariables: false, // enables use of variables in the program, use G56 for variables
+  // enableVariables: false, // enables use of variables in the program, use G56 for variables
   
   // Detail length settings
-  useDetailLengthCalculation: false, // enable calculation of detail length for Z-axis
+  // useDetailLengthCalculation: false, // enable calculation of detail length for Z-axis
 };
+
+  // writeVersion: {title:"Write version", description:"Write the version number in the header of the code.", group:0, type:"boolean"},
+  // writeMachine: {title:"Write machine", description:"Output the machine settings in the header of the code.", group:0, type:"boolean"},
+  // writeTools: {title:"Write tool list", description:"Output a tool list in the header of the code.", type:"boolean"},
+
 
 // user-defined property definitions
 propertyDefinitions = {
-  writeMachine: {title:"Write machine", description:"Output the machine settings in the header of the code.", group:0, type:"boolean"},
-  writeTools: {title:"Write tool list", description:"Output a tool list in the header of the code.", group:0, type:"boolean"},
-  writeVersion: {title:"Write version", description:"Write the version number in the header of the code.", group:0, type:"boolean"},
   showSequenceNumbers: {title:"Use sequence numbers", description:"Use sequence numbers for each block of outputted code.", group:1, type:"boolean"},
   sequenceNumberStart: {title:"Start sequence number", description:"The number at which to start the sequence numbers.", group:1, type:"integer"},
   sequenceNumberIncrement: {title:"Sequence number increment", description:"The amount by which the sequence number is incremented by in each block.", group:1, type:"integer"},
@@ -122,14 +124,14 @@ propertyDefinitions = {
   showNotes: {title:"Show notes", description:"Writes operation notes as comments in the outputted code.", type:"boolean"},
   useCycles: {title:"Use cycles", description:"Specifies if canned drilling cycles should be used.", type:"boolean"},
   autoEject: {title:"Auto eject", description:"Specifies whether the part should automatically eject at the end of a program.", type:"boolean"},
-  g53HomePositionX: {title:"G53 home position X", description:"G53 X-axis home position.", type:"number"},
-  g53HomePositionY: {title:"G53 home position Y", description:"G53 Y-axis home position.", type:"number"},
-  g53HomePositionZ: {title:"G53 home position Z", description:"G53 Z-axis home position.", type:"number"},
-  g53HomePositionSubZ: {title:"G53 home position subspindle Z", description:"G53 Z-axis home position when Secondary Spindle is active.", type:"number"},
-  g53WorkPositionSub: {title:"G53 subspindle working position", description:"G53 working position for Secondary Spindle when active.", type:"number"},
+  g53HomePositionX: {title:"G53 home position X", description:"G53 X-axis home position.", type:"number", group: "G53"},
+  g53HomePositionY: {title:"G53 home position Y", description:"G53 Y-axis home position.", type:"number", group: "G53"},
+  g53HomePositionZ: {title:"G53 home position Z", description:"G53 Z-axis home position.", type:"number", group: "G53"},
+  g53HomePositionSubZ: {title:"G53 home position subspindle Z", description:"G53 Z-axis home position when Secondary Spindle is active.", type:"number", group: "G53"},
+  g53WorkPositionSub: {title:"G53 subspindle working position", description:"G53 working position for Secondary Spindle when active.", type:"number", group: "G53"},
   useTailStock: {title:"Use tail stock", description:"Enable to use the tail stock.", type:"boolean"},
   useBarFeeder: {title:"Use bar feeder", description:"Enable to use the bar feeder.", type:"boolean"},
-  gotChipConveyor: {title:"Got chip conveyor", description:"Specifies whether to use a chip conveyor.", type:"boolean", presentation:"yesno"},
+  gotChipConveyor: {title:"Use chip conveyor", description:"Specifies whether to use a chip conveyor.", type:"boolean", presentation:"yesno"},
   useG112: {title:"Use polar interpolation", description:"Enables polar interpolation output.", type:"boolean"},
   useG61: {title:"Use exact stop mode", description:"Enables exact stop mode.", type:"boolean"},
   setting102: {title: "Feed rate calculation diameter", description: "Defines the part diameter in inches that the control uses to calculate feed rates.", type: "spatial", range: [0.1, 9999.0]},
@@ -143,11 +145,12 @@ propertyDefinitions = {
   airCleanChuck: {title:"Air clean chucks", description:"Enable to use the air blast to clean out the chuck on part transfers and part ejection.", type:"boolean"},
   safeStartAllOperations: {title:"Safe start all operations", description:"Write optional blocks at the beginning of all operations that include all commands to start program.", type:"boolean"},
   
+  // CUSTOM PROPERTIES for variables and detail length calculation
+
   // Variables settings
-  enableVariables: {title:"Enable variables", description:"Enable to use variables in the program. Requires G56 for variables.", type:"boolean", group:6},
-  
+  // enableVariables: {title:"Enable variables", description:"Enable to use variables in the program. Requires G56 for variables.", type:"boolean", group:6},
   // Detail length settings
-  useDetailLengthCalculation: {title:"Use detail length calculation", description:"Enable to use detail length calculation for Z-axis with G52.", type:"boolean", group:6}
+  // useDetailLengthCalculation: {title:"Use detail length calculation", description:"Enable to use detail length calculation for Z-axis with G52.", type:"boolean", group:6}
 };
 
 var permittedCommentChars = " ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.,=_-";
@@ -782,17 +785,18 @@ function onOpen() {
     return;
   }
 
-  if (properties.writeVersion) {
-    if ((typeof getHeaderVersion == "function") && getHeaderVersion()) {
-      writeComment(localize("post version") + ": " + getHeaderVersion());
-    }
-    if ((typeof getHeaderDate == "function") && getHeaderDate()) {
-      writeComment(localize("post modified") + ": " + getHeaderDate());
-    }
-  }
+  // ORIGINAL CODE write version
 
-  // DUMP TOOL LIST
-  if (properties.writeTools) {
+  // if (properties.writeVersion) {
+  //   if ((typeof getHeaderVersion == "function") && getHeaderVersion()) {
+  //     writeComment(localize("post version") + ": " + getHeaderVersion());
+  //   }
+  //   if ((typeof getHeaderDate == "function") && getHeaderDate()) {
+  //     writeComment(localize("post modified") + ": " + getHeaderDate());
+  //   }
+  // }
+
+  // MODIFIED CODE always write tool list
     var zRanges = {};
     if (is3D()) {
       var numberOfSections = getNumberOfSections();
@@ -806,7 +810,7 @@ function onOpen() {
           zRanges[tool.number] = zRange;
         }
       }
-    }
+    
 
     var tools = getToolTable();
     if (tools.getNumberOfTools() > 0) {
@@ -851,12 +855,6 @@ function onOpen() {
     }
   }
   
-  // Handle variables and G52 for detail length calculation 
-  if (properties.useDetailLengthCalculation) {
-    if (!properties.enableVariables) {
-      properties.enableVariables = true;
-    }
-    
     // Получаем размеры заготовки
     var workpiece = getWorkpiece();
     if (!workpiece) {
@@ -866,7 +864,6 @@ function onOpen() {
     
     // Непосредственно используем координаты Z заготовки
     var modelLength = Math.abs(workpiece.upper.z - workpiece.lower.z);
-    var int = 1.0
     
     writeln("");
     writeComment("WORKPIECE DIMENSIONS:");
@@ -886,7 +883,6 @@ function onOpen() {
     
     // Apply G52 with the workpiece length
     writeBlock(gFormat.format(52), "Z#100");
-  }
 
   // Probing Surface Inspection
   if (typeof inspectionWriteVariables == "function") {
