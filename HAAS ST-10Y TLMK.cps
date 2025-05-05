@@ -408,7 +408,6 @@ function startSpindle(forceRPMMode, initialPosition, rpm) {
   var useConstantSurfaceSpeed = currentSection.getTool().getSpindleMode() == SPINDLE_CONSTANT_SURFACE_SPEED;
   var maximumSpindleSpeed = (tool.maximumSpindleSpeed > 0) ? Math.min(tool.maximumSpindleSpeed, properties.maximumSpindleSpeed) : properties.maximumSpindleSpeed;
   
-
   // ORIGINAL CODE G50 S.... befor cutting
 
   // if (useConstantSurfaceSpeed && !forceRPMMode) {
@@ -419,9 +418,9 @@ function startSpindle(forceRPMMode, initialPosition, rpm) {
   gSpindleModeModal.reset();
   skipBlock = _skipBlock;
 
- 
-
   _spindleSpeed = useConstantSurfaceSpeed ? tool.surfaceSpeed * ((unit == MM) ? 1 / 1000.0 : 1 / 12.0) : _spindleSpeed;
+  
+  
   if (useConstantSurfaceSpeed && forceRPMMode) { // RPM mode is forced until move to initial position
     if (xFormat.getResultingValue(initialPosition.x) == 0) {
       _spindleSpeed = maximumSpindleSpeed;
@@ -436,6 +435,7 @@ function startSpindle(forceRPMMode, initialPosition, rpm) {
       (isSameDirection(currentSection.workPlane.forward, new Vector(0, 0, 1)) ? getCode("START_LIVE_TOOL_CW") :getCode("START_LIVE_TOOL_CCW")) // check if tool is axial or radial
     ); // G97 for drilling and live tools
   } else {
+    _spindleSpeed = tool.surfaceSpeed * ((unit == MM) ? 1 / 1000.0 : 1 / 12.0);
     writeBlock(getCode("CONSTANT_SURFACE_SPEED_ON"), sOutput.format(_spindleSpeed), mFormat.format(3)); // G96 for turning operations + M3
   }
 
@@ -1689,18 +1689,18 @@ function onSection() {
       spindleChange ||
       isFirstSection()) {
       if (machineState.isTurningOperation) {
-        if (spindleSpeed > 99999) {
+        if (spindleSpeed > 3000) {
           warning(subst(localize("Spindle speed exceeds maximum value for operation \"%1\"."), getOperationComment()));
         }
       } else {
-        if (spindleSpeed > 6000) {
+        if (spindleSpeed > 3000) {
           warning(subst(localize("Spindle speed exceeds maximum value for operation \"%1\"."), getOperationComment()));
         }
       }
       skipBlock = !insertToolCall && !spindleChange;
 
       // ORIGINAL CODE prints multiple times G97/G96 line
-      // startSpindle(true, getFramePosition(currentSection.getInitialPosition()));
+      startSpindle(true, getFramePosition(currentSection.getInitialPosition()));
     }
   }
 
@@ -1823,9 +1823,10 @@ function onSection() {
   }
 
   // enable SFM spindle speed
-  if (tool.getSpindleMode() == SPINDLE_CONSTANT_SURFACE_SPEED) {
-    startSpindle(false);
-  }
+  // ORIGINAL CODE prints multiple times G97/ G96
+  // if (tool.getSpindleMode() == SPINDLE_CONSTANT_SURFACE_SPEED) {
+  //   startSpindle(false);
+  // }
 
   if (properties.useParametricFeed &&
       hasParameter("operation-strategy") &&
@@ -1854,6 +1855,7 @@ function onSection() {
 
 function getPlane() {
   if (getMachiningDirection(currentSection) == MACHINING_DIRECTION_AXIAL) { // axial
+    writeComment("axial");
     if (machineState.useXZCMode ||
         (currentSection.hasParameter("operation-strategy") && (currentSection.getParameter("operation-strategy") == "drill")) ||
         machineState.isTurningOperation) {
