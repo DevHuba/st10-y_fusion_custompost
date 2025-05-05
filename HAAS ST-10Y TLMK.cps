@@ -1464,15 +1464,18 @@ function onSection() {
   var yAxisWasEnabled = !machineState.useXZCMode && !machineState.usePolarMode && machineState.liveToolIsActive;
   updateMachiningMode(currentSection); // sets the needed machining mode to machineState (usePolarMode, useXZCMode, axialCenterDrilling)
 
-  if (currentSection.getTool().isLiveTool) {
-    if (!isFirstSection() &&
-        ((getPreviousSection().getTool().isLiveTool() != currentSection.getTool().isLiveTool()) ||
-        (previousTapping && insertToolCall))) {
-      writeBlock(getCode("STOP_SPINDLE"));
-    }
-  } else {
-    writeBlock(getCode("STOP_SPINDLE"));
-  }
+
+  // ORIGINAL CODE check for stop spindle m5, m135, m145 - changed to custom code
+
+  // if (currentSection.getTool().isLiveTool) {
+  //   if (!isFirstSection() &&
+  //       ((getPreviousSection().getTool().isLiveTool() != currentSection.getTool().isLiveTool()) ||
+  //       (previousTapping && insertToolCall))) {
+  //     writeBlock(getCode("STOP_SPINDLE"));
+  //   }
+  // } else {
+  //   writeBlock(getCode("STOP_SPINDLE"));
+  // }
 
   /*
   if (properties.useM97 && !isFirstSection()) {
