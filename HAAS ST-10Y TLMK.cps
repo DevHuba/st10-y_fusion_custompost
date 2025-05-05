@@ -398,15 +398,6 @@ function isSpindleSpeedDifferent() {
   return false;
 }
 
-function onSpindleSpeed(spindleSpeed) {
-  if ((sOutput.getCurrent() != Number.POSITIVE_INFINITY) && rpmFormat.areDifferent(spindleSpeed, sOutput.getCurrent())) { // avoid redundant output of spindle speed
-    startSpindle(false, getFramePosition(currentSection.getInitialPosition()), spindleSpeed);
-  }
-  if ((pOutput.getCurrent() != Number.POSITIVE_INFINITY) && rpmFormat.areDifferent(spindleSpeed, pOutput.getCurrent())) { // avoid redundant output of spindle speed
-    startSpindle(false, getFramePosition(currentSection.getInitialPosition()), spindleSpeed);
-  }
-}
-
 function startSpindle(forceRPMMode, initialPosition, rpm) {
   var _skipBlock = skipBlock;
   var _spindleSpeed = spindleSpeed;
@@ -428,13 +419,7 @@ function startSpindle(forceRPMMode, initialPosition, rpm) {
   gSpindleModeModal.reset();
   skipBlock = _skipBlock;
 
-  // G97/G96
-  if (machineState.axialCenterDrilling || currentSection.getType() == TYPE_MILLING) {
-    // TODO: Add here check for z axis on tool and machine to check if it is radial or axial tool
-    writeBlock(getCode("CONSTANT_SURFACE_SPEED_OFF"), sOutput.format(_spindleSpeed), tool.clockwise ? getCode("START_LIVE_TOOL_CW") : getCode("START_LIVE_TOOL_CCW")); // G97 for drilling and live tools
-  } else {
-    writeBlock(getCode("CONSTANT_SURFACE_SPEED_ON")); // G96 for turning operations
-  }
+ 
 
   _spindleSpeed = useConstantSurfaceSpeed ? tool.surfaceSpeed * ((unit == MM) ? 1 / 1000.0 : 1 / 12.0) : _spindleSpeed;
   if (useConstantSurfaceSpeed && forceRPMMode) { // RPM mode is forced until move to initial position
@@ -443,6 +428,15 @@ function startSpindle(forceRPMMode, initialPosition, rpm) {
     } else {
       _spindleSpeed = Math.min((_spindleSpeed * ((unit == MM) ? 1000.0 : 12.0) / (Math.PI * Math.abs(initialPosition.x * 2))), maximumSpindleSpeed);
     }
+  }
+
+   // G97/G96
+   if (machineState.axialCenterDrilling || currentSection.getType() == TYPE_MILLING) {
+    writeBlock(getCode("CONSTANT_SURFACE_SPEED_OFF"), sOutput.format(_spindleSpeed), 
+      (isSameDirection(currentSection.workPlane.forward, new Vector(0, 0, 1)) ? getCode("START_LIVE_TOOL_CW") :getCode("START_LIVE_TOOL_CCW")) // check if tool is axial or radial
+    ); // G97 for drilling and live tools
+  } else {
+    writeBlock(getCode("CONSTANT_SURFACE_SPEED_ON"), sOutput.format(_spindleSpeed), mFormat.format(3)); // G96 for turning operations + M3
   }
 
   // ORIGINAL CODE G97 S... M3/M4
@@ -1704,7 +1698,9 @@ function onSection() {
         }
       }
       skipBlock = !insertToolCall && !spindleChange;
-      startSpindle(true, getFramePosition(currentSection.getInitialPosition()));
+
+      // ORIGINAL CODE prints multiple times G97/G96 line
+      // startSpindle(true, getFramePosition(currentSection.getInitialPosition()));
     }
   }
 
