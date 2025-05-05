@@ -1721,14 +1721,12 @@ function onSection() {
   forceAny();
   gMotionModal.reset();
 
-
-  //MODIFIED CODE PLANE
-
   gPlaneModal.reset();
+
+  // MODIFIED CODE only print plane if its milling operation G19, G18, G17
+
   if (currentSection.getType() == TYPE_MILLING) { // check if active tool
     writeBlock(gPlaneModal.format(getPlane())); // take plane for milling
-  } else {
-    // writeBlock(gPlaneModal.format(18)); // is in program start
   }
   
   var abc = new Vector(0, 0, 0);
@@ -1854,8 +1852,10 @@ function onSection() {
 }
 
 function getPlane() {
+
+  // ORIGINAL CODE check for G17/G18/G19 plane
+
   if (getMachiningDirection(currentSection) == MACHINING_DIRECTION_AXIAL) { // axial
-    writeComment("axial");
     if (machineState.useXZCMode ||
         (currentSection.hasParameter("operation-strategy") && (currentSection.getParameter("operation-strategy") == "drill")) ||
         machineState.isTurningOperation) {
@@ -2060,7 +2060,10 @@ function setPolarMode(activate) {
   if (activate) {
     writeBlock(gMotionModal.format(0), cOutput.format(0)); // set C-axis to 0 to avoid G112 issues
     writeBlock(getCode("POLAR_INTERPOLATION_ON")); // command for polar interpolation
-    writeBlock(gPlaneModal.format(getPlane()));
+
+    // ORIGINAL CODE printed multiple times G17/G18/G19 plane
+    // writeBlock(gPlaneModal.format(getPlane()));
+
     validate(gPlaneModal.getCurrent() == 17, localize("Internal post processor error.")); // make sure that G17 is active
     xFormat.setScale(1); // radius mode
     xOutput = createVariable({prefix:"X"}, xFormat);
@@ -2349,7 +2352,10 @@ function onLinear(_x, _y, _z, feed) {
   if (x || y || z) {
     if (pendingRadiusCompensation >= 0) {
       pendingRadiusCompensation = -1;
-      writeBlock(gPlaneModal.format(getPlane()));
+
+      // ORIGINAL CODE printed multiple times G17/G18/G19 plane
+      // writeBlock(gPlaneModal.format(getPlane()));
+
       if (getMachiningDirection(currentSection) == MACHINING_DIRECTION_INDEXING) {
         error(localize("Tool orientation is not supported for radius compensation."));
         return;
@@ -3109,7 +3115,9 @@ function onCyclePoint(x, y, z) {
     expandCyclePoint(x, y, z);
     return;
   }
-  writeBlock(gPlaneModal.format(getPlane()));
+
+  // ORIGINAL CODE printed multiple times G17/G18/G19 plane
+  // writeBlock(gPlaneModal.format(getPlane()));
 
   var gCycleTapping;
   switch (cycleType) {
@@ -3761,7 +3769,7 @@ function onSectionEnd() {
   }
 
   // Отключаем шпиндель
-  writeBlock(getCode("STOP_SPINDLE"));
+  // writeBlock(getCode("STOP_SPINDLE"));
   // Выключаем СОЖ
   onCommand(COMMAND_COOLANT_OFF);
 
@@ -3813,7 +3821,7 @@ function onClose() {
   writeln("");
 
   // Отключаем шпиндель
-  writeBlock(getCode("STOP_SPINDLE"));
+  // writeBlock(getCode("STOP_SPINDLE"));
   // Выключаем СОЖ
   onCommand(COMMAND_COOLANT_OFF);
 
