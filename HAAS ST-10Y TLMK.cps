@@ -1584,7 +1584,7 @@ function onSection() {
       }
     }
 
-    //ORIGINAL CODE TOOL CHANGE
+    //ORIGINAL CODE safe start tool change
 
     skipBlock = !insertToolCall;
     writeBlock("T" + toolFormat.format(tool.number * 100 + compensationOffset));
@@ -1708,8 +1708,18 @@ function onSection() {
   if (insertToolCall) { // force work offset when changing tool
     currentWorkOffset = undefined;
   }
-  var workOffset = currentSection.workOffset;
+
+  // ORIGINAL CODE unused variable WCS delete?
+  // var workOffset = currentSection.workOffset;
+
   writeWCS(currentSection);
+
+  // CUSTOM CODE add G52 Z#100 to every section start
+
+  if (currentSection.workOffset == 3){
+    // print G52 every section start only if WCS is 3
+    writeBlock(gMotionModal.format(52),"Z#100");
+  }
 
   // set coolant after we have positioned at Z
   setCoolant(tool.coolant);
