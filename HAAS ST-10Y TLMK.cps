@@ -865,17 +865,27 @@ function onOpen() {
     
     // Непосредственно используем координаты Z заготовки
     var modelLength = Math.abs(workpiece.upper.z - workpiece.lower.z);
+    var modelWidth = Math.abs(workpiece.upper.x - workpiece.lower.x);
+
+    // TODO: fix but currentSection is undefined
     
+    // Получаем текущий раздел программы
+    var currentSection = properties.section;
+    
+    // CUSTOM CODE write G56 and G52 and variables only if WCS is 3
+    if (currentSection.workOffset == 3){
     writeln("");
     writeComment("WORKPIECE DIMENSIONS:");
+    writeComment("Length: " + xyzFormat.format(modelLength));
+    writeComment("Width: " + xyzFormat.format(modelWidth));
+
+    // TODO: add here workpiece dimensions
+
     writeln("");
-    writeComment("Check Z length : DET. LENGTH + SAFE DIST + CUT TOOL WIDTH ( apc. 10mm )");
+    writeComment("Z length = DET. LENGTH + SAFE DIST + CUT TOOL WIDTH ( apc. 10mm )");
     writeComment("Z length: " + xyzFormat.format(modelLength + 1) + " mm");
     writeln("");
-    
-    // Use G56 for variables as specified in the requirement
-    writeWCS(currentSection);
-    
+
     // Сохраняем длину заготовки в переменной #100
     writeln("");
     writeComment("LOCAL VARIABLES");
@@ -884,6 +894,14 @@ function onOpen() {
     
     // Apply G52 with the workpiece length
     writeBlock(gFormat.format(52), "Z#100");
+    
+    }
+
+
+    // Use G56 for variables as specified in the requirement
+    // writeWCS(currentSection);
+    
+    
 
   // Probing Surface Inspection
   if (typeof inspectionWriteVariables == "function") {
