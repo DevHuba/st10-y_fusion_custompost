@@ -874,7 +874,7 @@ function onOpen() {
     writeln("");
     
     // Use G56 for variables as specified in the requirement
-    writeBlock(gFormat.format(56));
+    writeWCS(currentSection);
     
     // Сохраняем длину заготовки в переменной #100
     writeln("");
