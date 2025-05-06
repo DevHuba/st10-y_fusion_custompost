@@ -797,34 +797,35 @@ function onOpen() {
   // }
 
   // MODIFIED CODE always write tool list
-    var zRanges = {};
-    if (is3D()) {
-      var numberOfSections = getNumberOfSections();
-      for (var i = 0; i < numberOfSections; ++i) {
-        var section = getSection(i);
-        var zRange = section.getGlobalZRange();
-        var tool = section.getTool();
-        if (zRanges[tool.number]) {
-          zRanges[tool.number].expandToRange(zRange);
-        } else {
-          zRanges[tool.number] = zRange;
-        }
+
+  var zRanges = {};
+  if (is3D()) {
+    var numberOfSections = getNumberOfSections();
+    for (var i = 0; i < numberOfSections; ++i) {
+      var section = getSection(i);
+      var zRange = section.getGlobalZRange();
+      var tool = section.getTool();
+      if (zRanges[tool.number]) {
+        zRanges[tool.number].expandToRange(zRange);
+      } else {
+        zRanges[tool.number] = zRange;
       }
+    }
+  }
     
 
-    var tools = getToolTable();
-    if (tools.getNumberOfTools() > 0) {
-      for (var i = 0; i < tools.getNumberOfTools(); ++i) {
-        var tool = tools.getTool(i);
-        var compensationOffset = tool.isTurningTool() ? tool.compensationOffset : tool.lengthOffset;
-        var comment = "T" + toolFormat.format(tool.number * 100 + compensationOffset % 100) + " " +
-          (tool.diameter != 0 ? "D=" + spatialFormat.format(tool.diameter) + " " : "") +
-          (tool.isTurningTool() ? localize("NR") + "=" + spatialFormat.format(tool.noseRadius) : localize("CR") + "=" + spatialFormat.format(tool.cornerRadius)) +
-          (tool.taperAngle > 0 && (tool.taperAngle < Math.PI) ? " " + localize("TAPER") + "=" + taperFormat.format(tool.taperAngle) + localize("deg") : "") +
-          (zRanges[tool.number] ? " - " + localize("ZMIN") + "=" + spatialFormat.format(zRanges[tool.number].getMinimum()) : "") +
-          " - " + localize(getToolTypeName(tool.type));
-        writeComment(comment);
-      }
+  var tools = getToolTable();
+  if (tools.getNumberOfTools() > 0) {
+    for (var i = 0; i < tools.getNumberOfTools(); ++i) {
+      var tool = tools.getTool(i);
+      var compensationOffset = tool.isTurningTool() ? tool.compensationOffset : tool.lengthOffset;
+      var comment = "T" + toolFormat.format(tool.number * 100 + compensationOffset % 100) + " " +
+        (tool.diameter != 0 ? "D=" + spatialFormat.format(tool.diameter) + " " : "") +
+        (tool.isTurningTool() ? localize("NR") + "=" + spatialFormat.format(tool.noseRadius) : localize("CR") + "=" + spatialFormat.format(tool.cornerRadius)) +
+        (tool.taperAngle > 0 && (tool.taperAngle < Math.PI) ? " " + localize("TAPER") + "=" + taperFormat.format(tool.taperAngle) + localize("deg") : "") +
+        (zRanges[tool.number] ? " - " + localize("ZMIN") + "=" + spatialFormat.format(zRanges[tool.number].getMinimum()) : "") +
+        " - " + localize(getToolTypeName(tool.type));
+      writeComment(comment);
     }
   }
   
