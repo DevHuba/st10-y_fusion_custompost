@@ -901,7 +901,7 @@ function onOpen() {
 
   // SAFE BLOCK on programm start
   writeln("");
-  writeComment("SAFE BLOCK on programm start");
+  writeComment("SAFE BLOCK");
   writeln("");
 
   //CUSTOM CODE G40 , G80 , G99 , G18 - turning plane
