@@ -714,8 +714,10 @@ function getB(abc, section) {
   }
 }
 
+
 var machineConfigurationMainSpindle;
 var machineConfigurationSubSpindle;
+
 
 function onOpen() {
   if (properties.useRadius) {
@@ -785,17 +787,6 @@ function onOpen() {
     return;
   }
 
-  // ORIGINAL CODE write version
-
-  // if (properties.writeVersion) {
-  //   if ((typeof getHeaderVersion == "function") && getHeaderVersion()) {
-  //     writeComment(localize("post version") + ": " + getHeaderVersion());
-  //   }
-  //   if ((typeof getHeaderDate == "function") && getHeaderDate()) {
-  //     writeComment(localize("post modified") + ": " + getHeaderDate());
-  //   }
-  // }
-
   // MODIFIED CODE always write tool list
 
   var zRanges = {};
@@ -855,53 +846,44 @@ function onOpen() {
       }
     }
   }
+
+  // CUSTOM CODE dimensions and wcs
   
-    // Получаем размеры заготовки
-    var workpiece = getWorkpiece();
-    if (!workpiece) {
-      error("Workpiece is not defined. Cannot generate code without workpiece information.");
-      return;
-    }
+  // Получаем размеры заготовки
+  var workpiece = getWorkpiece();
+  if (!workpiece) {
+    error("Workpiece is not defined. Cannot generate code without workpiece information.");
+    return;
+  }
     
-    // Непосредственно используем координаты Z заготовки
-    var modelLength = Math.abs(workpiece.upper.z - workpiece.lower.z);
-    var modelWidth = Math.abs(workpiece.upper.x - workpiece.lower.x);
+  // Непосредственно используем координаты Z заготовки
+  var modelLength = Math.abs(workpiece.upper.z - workpiece.lower.z);
+  var modelWidth = Math.abs(workpiece.upper.x - workpiece.lower.x);
 
-    // TODO: fix but currentSection is undefined
-    
-    // Получаем текущий раздел программы
-    var currentSection = properties.section;
-    
-    // CUSTOM CODE write G56 and G52 and variables only if WCS is 3
-    if (currentSection.workOffset == 3){
-    writeln("");
-    writeComment("WORKPIECE DIMENSIONS:");
-    writeComment("Length: " + xyzFormat.format(modelLength));
-    writeComment("Width: " + xyzFormat.format(modelWidth));
+  writeln("");
 
-    // TODO: add here workpiece dimensions
+  writeComment("WORKPIECE DIMENSIONS:");
+  writeComment("Length: " + xyzFormat.format(modelLength));
+  writeComment("Width: " + xyzFormat.format(modelWidth));
 
-    writeln("");
+  writeln("");
+
+
+  // Get current section
+  var currentSection = getSection(0); 
+
+  // CUSTOM CODE to check if WCS is 3 / G56 
+  if (currentSection.workOffset == 3) {
     writeComment("Z length = DET. LENGTH + SAFE DIST + CUT TOOL WIDTH ( apc. 10mm )");
     writeComment("Z length: " + xyzFormat.format(modelLength + 1) + " mm");
     writeln("");
 
     // Сохраняем длину заготовки в переменной #100
-    writeln("");
     writeComment("LOCAL VARIABLES");
     writeln("");
     writeBlock("#100 = " + xyzFormat.format(modelLength)); // Длина заготовки
-    
-    // Apply G52 with the workpiece length
-    writeBlock(gFormat.format(52), "Z#100");
-    
-    }
+  }
 
-
-    // Use G56 for variables as specified in the requirement
-    // writeWCS(currentSection);
-    
-    
 
   // Probing Surface Inspection
   if (typeof inspectionWriteVariables == "function") {
@@ -1503,7 +1485,6 @@ function onSection() {
     writeBlock(ssvModal.format(39));
   }
 
-
   writeln("");
 
   /*
@@ -1729,6 +1710,7 @@ function onSection() {
 
   // ORIGINAL CODE unused variable WCS delete?
   // var workOffset = currentSection.workOffset;
+
 
   writeWCS(currentSection);
 
@@ -3935,5 +3917,5 @@ function onClose() {
 }
 // <<<<< INCLUDED FROM ../common/haas lathe.cps
 
-properties.maximumSpindleSpeed = 3000;
+properties.maximumSpindleSpeed = 2500;
 
