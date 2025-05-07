@@ -69,8 +69,8 @@ properties = {
   // writeVersion: false, // include version info
   // preloadTool: false, // preloads next tool on tool change if any
   showSequenceNumbers: false, // show sequence numbers
-  sequenceNumberStart: 10, // first sequence number
-  sequenceNumberIncrement: 1, // increment for sequence numbers
+  // sequenceNumberStart: 10, // first sequence number
+  // sequenceNumberIncrement: 1, // increment for sequence numbers
   separateWordsWithSpace: true, // specifies that the words should be separated with a white space
   useRadius: false, // specifies that arcs should be output using the radius (R word) instead of the I, J, and K words.
   maximumSpindleSpeed: 2400, // specifies the maximum spindle speed
@@ -110,13 +110,12 @@ properties = {
   // writeVersion: {title:"Write version", description:"Write the version number in the header of the code.", group:0, type:"boolean"},
   // writeMachine: {title:"Write machine", description:"Output the machine settings in the header of the code.", group:0, type:"boolean"},
   // writeTools: {title:"Write tool list", description:"Output a tool list in the header of the code.", type:"boolean"},
-
+  // sequenceNumberStart: {title:"Start sequence number", description:"The number at which to start the sequence numbers.", group:1, type:"integer"},
+  // sequenceNumberIncrement: {title:"Sequence number increment", description:"The amount by which the sequence number is incremented by in each block.", group:1, type:"integer"},
+  // showSequenceNumbers: {title:"Use sequence numbers", description:"Use sequence numbers for each block of outputted code.", group:1, type:"boolean"},
 
 // user-defined property definitions
 propertyDefinitions = {
-  showSequenceNumbers: {title:"Use sequence numbers", description:"Use sequence numbers for each block of outputted code.", group:1, type:"boolean"},
-  sequenceNumberStart: {title:"Start sequence number", description:"The number at which to start the sequence numbers.", group:1, type:"integer"},
-  sequenceNumberIncrement: {title:"Sequence number increment", description:"The amount by which the sequence number is incremented by in each block.", group:1, type:"integer"},
   separateWordsWithSpace: {title:"Separate words with space", description:"Adds spaces between words if 'yes' is selected.", type:"boolean"},
   useRadius: {title:"Radius arcs", description:"If yes is selected, arcs are outputted using radius values rather than IJK.", type:"boolean"},
   maximumSpindleSpeed: {title:"Max spindle speed", description:"Defines the maximum spindle speed allowed by your machines.", type:"integer", range:[0, 999999999]},
@@ -1489,6 +1488,10 @@ function onSection() {
   }
 
   writeln("");
+  // Increment sequence number at start of each section
+  writeBlock("N" + sequenceNumber);
+  sequenceNumber += 1;
+
 
   /*
   if (properties.useM97) {
@@ -1714,9 +1717,9 @@ function onSection() {
   // ORIGINAL CODE unused variable WCS delete?
   // var workOffset = currentSection.workOffset;
 
-  writeWCS(currentSection);
 
   // CUSTOM CODE add G52 Z#100 to every section start
+  writeWCS(currentSection);
 
   if (currentSection.workOffset == 3){
     // print G52 every section start only if WCS is 3
