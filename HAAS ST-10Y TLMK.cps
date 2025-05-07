@@ -68,14 +68,14 @@ properties = {
   // writeTools: false, // writes the tools
   // writeVersion: false, // include version info
   // preloadTool: false, // preloads next tool on tool change if any
-  showSequenceNumbers: false, // show sequence numbers
-  // sequenceNumberStart: 10, // first sequence number
+  // showSequenceNumbers: false, // show sequence numbers
+  // sequenceNumberStart: 1, // first sequence number
   // sequenceNumberIncrement: 1, // increment for sequence numbers
   separateWordsWithSpace: true, // specifies that the words should be separated with a white space
-  useRadius: false, // specifies that arcs should be output using the radius (R word) instead of the I, J, and K words.
-  maximumSpindleSpeed: 2400, // specifies the maximum spindle speed
+  useRadius: true, // specifies that arcs should be output using the radius (R word) instead of the I, J, and K words.
+  maximumSpindleSpeed: 2500, // specifies the maximum spindle speed
   useParametricFeed: false, // specifies that feed should be output using Q values
-  showNotes: false, // specifies that operation notes should be output.
+  showNotes: true, // specifies that operation notes should be output.
   useCycles: true, // specifies that drilling cycles should be used.
   autoEject: false, // specifies if the part should be automatically ejected at end of program
   g53HomePositionX: 0, // home position for X-axis
@@ -93,7 +93,7 @@ properties = {
   rapidRewinds: false, // rewinds the C-axis using G0
   useSSV: false, // outputs M38/39 to enable SSV in turning operations
   optimizeCAxisSelect: false, // optimize output of enable/disable C-axis codes
-  gotSecondarySpindle: false, // specifies if the machine has a secondary spindle
+  //gotSecondarySpindle: false, // specifies if the machine has a secondary spindle
   looping: false, //output program for M97 looping
   numberOfRepeats: 1, //how many times to loop program
   useSimpleThread: true, // outputs a G92 threading cycle, false outputs a G76 (standard) threading cycle
@@ -113,6 +113,8 @@ properties = {
   // sequenceNumberStart: {title:"Start sequence number", description:"The number at which to start the sequence numbers.", group:1, type:"integer"},
   // sequenceNumberIncrement: {title:"Sequence number increment", description:"The amount by which the sequence number is incremented by in each block.", group:1, type:"integer"},
   // showSequenceNumbers: {title:"Use sequence numbers", description:"Use sequence numbers for each block of outputted code.", group:1, type:"boolean"},
+  // gotSecondarySpindle: {title:"Got secondary spindle", description:"Specifies if the machine has a secondary spindle.", type:"boolean"},
+  
 
 // user-defined property definitions
 propertyDefinitions = {
@@ -137,9 +139,8 @@ propertyDefinitions = {
   rapidRewinds: {title: "Use G0 for rewinds", description: "Uses G0 moves for rewinding of the C-axis.", type: "boolean"},
   useSSV: {title: "Use SSV", description:"Outputs M38/M39 to enable SSV for turning operations.", type:"boolean"},
   optimizeCAxisSelect: {title:"Optimize C-axis selection", description:"Optimizes the output of enable/disable C-axis codes.", type:"boolean"},
-  gotSecondarySpindle: {title:"Got secondary spindle", description:"Specifies if the machine has a secondary spindle.", type:"boolean"},
-  looping: {title:"Use M97 looping", description:"Output program for M97 looping.", type:"boolean", presentation:"yesno", group:5},
-  numberOfRepeats: {title:"Number of repeats", description:"How many times to loop the program.", type:"integer", range:[0, 99999999], group:5},
+  looping: {title:"Use M97 looping", description:"Output program for M97 looping.", type:"boolean", presentation:"yesno", group:"Looping"},
+  numberOfRepeats: {title:"Number of repeats", description:"How many times to loop the program.", type:"integer", range:[0, 99999999], group:"Looping"},
   useSimpleThread: {title:"Use simple threading cycle", description:"Enable to output G92 simple threading cycle, disable to output G76 standard threading cycle.", type:"boolean"},
   airCleanChuck: {title:"Air clean chucks", description:"Enable to use the air blast to clean out the chuck on part transfers and part ejection.", type:"boolean"},
   safeStartAllOperations: {title:"Safe start all operations", description:"Write optional blocks at the beginning of all operations that include all commands to start program.", type:"boolean"},
@@ -213,9 +214,14 @@ var tailStockModal = createModal({}, mFormat);
 // fixed settings
 var firstFeedParameter = 100;
 var usePolarCircular = false;
+var showSequenceNumbers = true;
 
 var WARNING_WORK_OFFSET = 0;
 var WARNING_REPEAT_TAPPING = 1;
+
+var SEQUENCE_NUMBER_INCREMENT = 1;
+var SEQUENCE_NUMBER_START = 1;
+
 
 // collected state
 var sequenceNumber;
@@ -719,9 +725,13 @@ function getB(abc, section) {
 
 var machineConfigurationMainSpindle;
 var machineConfigurationSubSpindle;
+sequenceNumber = 2;
 
 
 function onOpen() {
+
+  sequenceNumber = 1;
+
   if (properties.useRadius) {
     maximumCircularSweep = toRad(90); // avoid potential center calculation errors for CNC
   }
@@ -1488,9 +1498,10 @@ function onSection() {
   }
 
   writeln("");
-  // Increment sequence number at start of each section
-  writeBlock("N" + sequenceNumber);
-  sequenceNumber += 1;
+
+  // CUSTOM CODE print N1 and so on every section start - for search
+  writeBlock("N" + SEQUENCE_NUMBER_START);
+  SEQUENCE_NUMBER_START += SEQUENCE_NUMBER_INCREMENT;
 
 
   /*
@@ -1576,18 +1587,20 @@ function onSection() {
       return;
     }
 
-    if (properties.gotSecondarySpindle) {
-      switch (currentSection.spindle) {
-      case SPINDLE_PRIMARY: // main spindle
-        skipBlock = !insertToolCall;
-        writeBlock(gSpindleModal.format(15));
-        break;
-      case SPINDLE_SECONDARY: // sub spindle
-        skipBlock = !insertToolCall;
-        writeBlock(gSpindleModal.format(14));
-        break;
-      }
-    }
+
+    // ORIGINAL CODE for secondary spindle . delete ?
+    // if (properties.gotSecondarySpindle) {
+    //   switch (currentSection.spindle) {
+    //   case SPINDLE_PRIMARY: // main spindle
+    //     skipBlock = !insertToolCall;
+    //     writeBlock(gSpindleModal.format(15));
+    //     break;
+    //   case SPINDLE_SECONDARY: // sub spindle
+    //     skipBlock = !insertToolCall;
+    //     writeBlock(gSpindleModal.format(14));
+    //     break;
+    //   }
+    // }
 
     //ORIGINAL CODE safe start tool change
 
@@ -2858,10 +2871,12 @@ function onCircular(clockwise, cx, cy, cz, x, y, z, feed) {
 
 function onCycle() {
   if ((typeof isSubSpindleCycle == "function") && isSubSpindleCycle(cycleType)) {
-    if (!properties.gotSecondarySpindle) {
-      error(localize("Secondary spindle is not available."));
-      return;
-    }
+
+    // ORIGINAL CODE for secondary spindle . delete ?
+    // if (!properties.gotSecondarySpindle) {
+    //   error(localize("Secondary spindle is not available."));
+    //   return;
+    // }
 
     writeln("");
     if (hasParameter("operation-comment")) {
