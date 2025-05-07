@@ -535,11 +535,14 @@ function writeWCS(section) {
         currentWorkOffset = workOffset;
       }
     } else {
-      if (workOffset != currentWorkOffset) {
+
+      // CUSTOM CODE coment check if tool was changed
+
+      // if (workOffset != currentWorkOffset) {
         forceWorkPlane();
         writeBlock(gFormat.format(53 + workOffset)); // G54->G59
         currentWorkOffset = workOffset;
-      }
+      // }
     }
   }
 }
@@ -1710,7 +1713,6 @@ function onSection() {
 
   // ORIGINAL CODE unused variable WCS delete?
   // var workOffset = currentSection.workOffset;
-
 
   writeWCS(currentSection);
 
