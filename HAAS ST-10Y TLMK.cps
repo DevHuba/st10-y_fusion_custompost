@@ -3093,25 +3093,47 @@ function onCyclePathEnd() {
   }
   
   for (var i = 0; i < cyclePath.length; ++i) {
-    if (i == 0 || i == (cyclePath.length - 1)) { // write sequence number on first and last line of the cycle path
-      properties.showSequenceNumbers = true;
-      if ((i == 0 && pathBlockNumber.start != sequenceNumber) || (i == (cyclePath.length - 1) && pathBlockNumber.end != sequenceNumber)) {
-        error(localize("Mismatch of start/end block number in turning canned cycle."));
-        return;
-      }
+    //Original code
+    // if (i == 0 || i == (cyclePath.length - 1)) { // write sequence number on first and last line of the cycle path
+      // properties.showSequenceNumbers = true;
+      // if ((i == 0 && pathBlockNumber.start != sequenceNumber) || (i == (cyclePath.length - 1) && pathBlockNumber.end != sequenceNumber)) {
+      //   error(localize("Mismatch of start/end block number in turning canned cycle."));
+      //   return;
+      // }
+    // }
+
+    //Modified code
+    if (i == 0) {
+      writeBlock("N" + SEQUENCE_NUMBER_START * 10);
     }
+
+    //Original code
     writeBlock(cyclePath[i]); // output cycle path
-    properties.showSequenceNumbers = saveShowSequenceNumbers; // reset property to initial state
+    // properties.showSequenceNumbers = saveShowSequenceNumbers; // reset property to initial state
+
+    //Modified code
+    if (i == cyclePath.length - 1) {
+      writeBlock("N" + ((SEQUENCE_NUMBER_START * 10) + (SEQUENCE_NUMBER_INCREMENT * 10)));
+    }
+
+    //Original code
     isCannedCycle = false;
   }
 }
 
 function getStartEndSequenceNumber(cyclePath, start) {
   if (start) {
-    pathBlockNumber.start = sequenceNumber + conditional(saveShowSequenceNumbers, properties.sequenceNumberIncrement);
+    //Original code
+    // pathBlockNumber.start = sequenceNumber + conditional(saveShowSequenceNumbers, properties.sequenceNumberIncrement);
+    //Modified code
+    pathBlockNumber.start = SEQUENCE_NUMBER_START * 10;
     return pathBlockNumber.start;
   } else {
-    pathBlockNumber.end = sequenceNumber + properties.sequenceNumberIncrement + conditional(saveShowSequenceNumbers, (cyclePath.length - 1) * properties.sequenceNumberIncrement);
+    //Original code
+    //pathBlockNumber.end = sequenceNumber + properties.sequenceNumberIncrement + conditional(saveShowSequenceNumbers, (cyclePath.length - 1) * properties.sequenceNumberIncrement);
+    //Modified code
+    pathBlockNumber.end = SEQUENCE_NUMBER_START * 10 + SEQUENCE_NUMBER_INCREMENT * 10;
+
     return pathBlockNumber.end;
   }
 }
