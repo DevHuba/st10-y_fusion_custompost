@@ -71,6 +71,7 @@ properties = {
   // showSequenceNumbers: false, // show sequence numbers
   // sequenceNumberStart: 1, // first sequence number
   // sequenceNumberIncrement: 1, // increment for sequence numbers
+  stopperToolNumber: 1, // tool that must go at start of program to pick G56
   separateWordsWithSpace: true, // specifies that the words should be separated with a white space
   useRadius: true, // specifies that arcs should be output using the radius (R word) instead of the I, J, and K words.
   maximumSpindleSpeed: 2500, // specifies the maximum spindle speed
@@ -107,6 +108,9 @@ properties = {
   // useDetailLengthCalculation: false, // enable calculation of detail length for Z-axis
 };
 
+
+  // ORIGINAL PROPERTIES that was cleaned
+
   // writeVersion: {title:"Write version", description:"Write the version number in the header of the code.", group:0, type:"boolean"},
   // writeMachine: {title:"Write machine", description:"Output the machine settings in the header of the code.", group:0, type:"boolean"},
   // writeTools: {title:"Write tool list", description:"Output a tool list in the header of the code.", type:"boolean"},
@@ -118,6 +122,7 @@ properties = {
 
 // user-defined property definitions
 propertyDefinitions = {
+  stopperToolNumber: {title: "WCS setup tool",description: "Number of tool that fixes the WCS", type: "integer", range: [1, 12]},
   separateWordsWithSpace: {title:"Separate words with space", description:"Adds spaces between words if 'yes' is selected.", type:"boolean"},
   useRadius: {title:"Radius arcs", description:"If yes is selected, arcs are outputted using radius values rather than IJK.", type:"boolean"},
   maximumSpindleSpeed: {title:"Max spindle speed", description:"Defines the maximum spindle speed allowed by your machines.", type:"integer", range:[0, 999999999]},
@@ -725,12 +730,9 @@ function getB(abc, section) {
 
 var machineConfigurationMainSpindle;
 var machineConfigurationSubSpindle;
-sequenceNumber = 2;
 
 
 function onOpen() {
-
-  sequenceNumber = 1;
 
   if (properties.useRadius) {
     maximumCircularSweep = toRad(90); // avoid potential center calculation errors for CNC
@@ -859,7 +861,10 @@ function onOpen() {
     }
   }
 
-  // CUSTOM CODE dimensions and wcs
+
+
+
+  // CUSTOM CODE DIMENSIONS, WCS, STOPPER TOOL, SAFE BLOCK
   
   // Получаем размеры заготовки
   var workpiece = getWorkpiece();
@@ -876,11 +881,33 @@ function onOpen() {
 
   writeComment("WORKPIECE DIMENSIONS:");
   writeComment("Length: " + xyzFormat.format(modelLength));
-  writeComment("Width: " + xyzFormat.format(modelWidth));
+  writeComment("Diameter: " + xyzFormat.format(modelWidth));
+
+  // SAFE BLOCK on programm start
+  writeln("");
+  writeComment("SAFE BLOCK");
+  writeln("");
+
+  //CUSTOM CODE G40 , G80 , G99 , G18 - turning plane
+  writeBlock(gFormat.format(40), gFormat.format(80), getCode("FEED_MODE_UNIT_REV"), gFormat.format(18));
+
+  // UNITS
+  switch (unit) {
+    case IN:
+      writeBlock(gUnitModal.format(20));
+      break;
+    case MM:
+      writeBlock(gUnitModal.format(21));
+      break;
+    }
+
+  //ORIGINAL CODE SPINDLE SPEED
+  writeBlock(gFormat.format(50), sOutput.format(properties.maximumSpindleSpeed));
+  sOutput.reset();   
 
   writeln("");
 
-
+  // CUSTOM CODE to write stopper tool
   // Get current section
   var currentSection = getSection(0); 
 
@@ -888,11 +915,23 @@ function onOpen() {
   if (currentSection.workOffset == 3) {
     writeComment("Z length = DET. LENGTH + SAFE DIST + CUT TOOL WIDTH ( apc. 10mm )");
     writeComment("Z length: " + xyzFormat.format(modelLength + 1) + " mm");
+    writeComment("WCS setup tool: " + properties.stopperToolNumber + " ");
     writeln("");
 
     // Сохраняем длину заготовки в переменной #100
     writeComment("LOCAL VARIABLES");
     writeln("");
+    writeBlock("#100 = " + xyzFormat.format(modelLength)); // Длина заготовки
+    writeln("");
+
+    // CUSTOM CODE to write stopper tool
+    writeComment("STOPPER TOOL");
+    writeln("");
+    writeBlock("T" + toolFormat.format(properties.stopperToolNumber * 100 + properties.stopperToolNumber % 100));
+    writeWCS(currentSection);
+
+    writeln("");
+    
     writeBlock("#100 = " + xyzFormat.format(modelLength)); // Длина заготовки
   }
 
@@ -911,23 +950,8 @@ function onOpen() {
     }
   }
 
-  // SAFE BLOCK on programm start
-  writeln("");
-  writeComment("SAFE BLOCK");
-  writeln("");
 
-  //CUSTOM CODE G40 , G80 , G99 , G18 - turning plane
-  writeBlock(gFormat.format(40), gFormat.format(80), getCode("FEED_MODE_UNIT_REV"), gFormat.format(18));
 
-  // UNITS
-  switch (unit) {
-  case IN:
-    writeBlock(gUnitModal.format(20));
-    break;
-  case MM:
-    writeBlock(gUnitModal.format(21));
-    break;
-  }
 
   if (properties.useG61) {
     writeBlock(gExactStopModal.format(61));
@@ -952,9 +976,7 @@ function onOpen() {
     }
   }
 
-  //ORIGINAL CODE SPINDLE SPEED
-  writeBlock(gFormat.format(50), sOutput.format(properties.maximumSpindleSpeed));
-  sOutput.reset();
+  
 
   if (properties.gotChipConveyor) {
     onCommand(COMMAND_START_CHIP_TRANSPORT);
