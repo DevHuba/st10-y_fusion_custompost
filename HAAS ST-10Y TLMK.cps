@@ -923,25 +923,29 @@ function onOpen() {
     writeln("");
     writeBlock("#100 = " + xyzFormat.format(modelLength)); // Длина заготовки
     writeln("");
-
-    // CUSTOM CODE to write stopper tool
-    writeComment("STOPPER TOOL");
-    writeln("");
-    writeBlock("T" + toolFormat.format(properties.stopperToolNumber * 100 + properties.stopperToolNumber % 100));
-    writeWCS(currentSection);
-    writeBlock(gFormat.format(52), "Z[#100]"); // Установка программного ограничения по Z используя длину заготовки
-    writeBlock(gFormat.format(0), "Z0."); // Move to Z0
-    writeBlock(gFormat.format(0), "X0."); // Move to X0
-    writeln("");
-    writeBlock(mFormat.format(0), formatComment("PULL OUT WORKPIECE")); // PULL OUT WORKPIECE
-    writeln("");
-
-    // Для обычного токарного инструмента возвращаем только оси X и Z
-    writeBlock(gFormat.format(53), "X" + xFormat.format(properties.g53HomePositionX)); // retract X
-    writeBlock(gFormat.format(53), "Z" + zFormat.format(currentSection.spindle == SPINDLE_SECONDARY ? properties.g53HomePositionSubZ : properties.g53HomePositionZ)); // retract Z
-    writeln("");
     
   }
+
+  // CUSTOM CODE to write stopper tool
+  writeComment("STOPPER TOOL");
+  writeln("");
+  writeBlock("T" + toolFormat.format(properties.stopperToolNumber * 100 + properties.stopperToolNumber % 100));
+  writeWCS(currentSection);
+  
+  // add workpiece length to WCS only in G56
+  if (currentSection.workOffset == 3){
+    writeBlock(gFormat.format(52), "Z[#100]"); // Установка программного ограничения по Z используя длину заготовки
+  }
+  writeBlock(gFormat.format(0), "Z0."); // Move to Z0
+  writeBlock(gFormat.format(0), "X0."); // Move to X0
+  writeln("");
+  writeBlock(mFormat.format(0), formatComment("PULL OUT WORKPIECE")); // PULL OUT WORKPIECE
+  writeln("");
+
+  // Для обычного токарного инструмента возвращаем только оси X и Z
+  writeBlock(gFormat.format(53), "X" + xFormat.format(properties.g53HomePositionX)); // retract X
+  writeBlock(gFormat.format(53), "Z" + zFormat.format(currentSection.spindle == SPINDLE_SECONDARY ? properties.g53HomePositionSubZ : properties.g53HomePositionZ)); // retract Z
+  writeln("");
 
 
   // Probing Surface Inspection
