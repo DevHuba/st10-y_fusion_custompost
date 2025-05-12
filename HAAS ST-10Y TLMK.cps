@@ -444,7 +444,7 @@ function startSpindle(forceRPMMode, initialPosition, rpm) {
 
    // G97/G96
    if (machineState.axialCenterDrilling || currentSection.getType() == TYPE_MILLING) {
-    writeBlock(getCode("CONSTANT_SURFACE_SPEED_OFF"), sOutput.format(_spindleSpeed), 
+    writeBlock(getCode("CONSTANT_SURFACE_SPEED_OFF"), pOutput.format(_spindleSpeed), 
       (isSameDirection(currentSection.workPlane.forward, new Vector(0, 0, 1)) ? getCode("START_LIVE_TOOL_CW") :getCode("START_LIVE_TOOL_CCW")) // check if tool is axial or radial
     ); // G97 for drilling and live tools
   } else {
