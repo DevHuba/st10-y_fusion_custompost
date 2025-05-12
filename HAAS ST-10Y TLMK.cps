@@ -933,11 +933,13 @@ function onOpen() {
     writeBlock(gFormat.format(0), "Z0."); // Move to Z0
     writeBlock(gFormat.format(0), "X0."); // Move to X0
     writeln("");
+    writeBlock(mFormat.format(0), formatComment("PULL OUT WORKPIECE")); // PULL OUT WORKPIECE
+    writeln("");
+
     // Для обычного токарного инструмента возвращаем только оси X и Z
     writeBlock(gFormat.format(53), "X" + xFormat.format(properties.g53HomePositionX)); // retract X
     writeBlock(gFormat.format(53), "Z" + zFormat.format(currentSection.spindle == SPINDLE_SECONDARY ? properties.g53HomePositionSubZ : properties.g53HomePositionZ)); // retract Z
     writeln("");
-    writeBlock(mFormat.format(0), formatComment("PULL OUT WORKPIECE")); // PULL OUT WORKPIECE
     
   }
 
@@ -1702,6 +1704,8 @@ function onSection() {
     // select spindle if required
   }
 
+  // CUSTOM CODE G98/G99 print only for live tool
+
   // Режим подачи (G98/G99) выводим только для живого инструмента
   gFeedModeModal.reset();
   if (currentSection.getType() == TYPE_MILLING) { // Только для фрезерных операций (живой инструмент)
@@ -1746,6 +1750,7 @@ function onSection() {
       skipBlock = !insertToolCall && !spindleChange;
 
       // ORIGINAL CODE prints multiple times G97/G96 line
+      //t
       startSpindle(true, getFramePosition(currentSection.getInitialPosition()));
     }
   }
