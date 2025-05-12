@@ -1583,7 +1583,6 @@ function onSection() {
   }
 
   if (insertToolCall || operationNeedsSafeStart) {
-    writeBlock("if work");
     if (insertToolCall) {
       forceWorkPlane();
     }
