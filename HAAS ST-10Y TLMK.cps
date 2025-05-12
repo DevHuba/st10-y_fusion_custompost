@@ -931,7 +931,7 @@ function onOpen() {
   writeln("");
   writeBlock("T" + toolFormat.format(properties.stopperToolNumber * 100 + properties.stopperToolNumber % 100));
   writeWCS(currentSection);
-  
+
   // add workpiece length to WCS only in G56
   if (currentSection.workOffset == 3){
     writeBlock(gFormat.format(52), "Z[#100]"); // Установка программного ограничения по Z используя длину заготовки
@@ -1470,8 +1470,10 @@ function onSection() {
   }
   partCutoff = hasParameter("operation-strategy") && (getParameter("operation-strategy") == "turningPart");
   var insertToolCall = forceToolAndRetract || isFirstSection() ||
-    currentSection.getForceToolChange && currentSection.getForceToolChange() ||
-    (tool.number != getPreviousSection().getTool().number) ||
+    //ORIGINAL CODE print tool only on tool change T0101 T1
+    // (tool.number != getPreviousSection().getTool().number) ||
+    // CUSTOM CODE always print tool call
+    (tool.number = getPreviousSection().getTool().number) ||
     (tool.compensationOffset != getPreviousSection().getTool().compensationOffset) ||
     (tool.diameterOffset != getPreviousSection().getTool().diameterOffset) ||
     (tool.lengthOffset != getPreviousSection().getTool().lengthOffset);
@@ -1531,7 +1533,6 @@ function onSection() {
     writeBlock(ssvModal.format(39));
   }
 
-  writeln("");
 
   // CUSTOM CODE print N1 and so on every section start - for search
   writeBlock("N" + SEQUENCE_NUMBER_START);
@@ -1582,6 +1583,7 @@ function onSection() {
   }
 
   if (insertToolCall || operationNeedsSafeStart) {
+    writeBlock("if work");
     if (insertToolCall) {
       forceWorkPlane();
     }
