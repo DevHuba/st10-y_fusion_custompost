@@ -941,6 +941,7 @@ function onOpen() {
   writeln("");
   writeBlock(mFormat.format(0), formatComment("PULL OUT WORKPIECE")); // PULL OUT WORKPIECE
   writeln("");
+  writeBlock(gFormat.format(0), "Z5."); // Move to X0
 
   // Для обычного токарного инструмента возвращаем только оси X и Z
   writeBlock(gFormat.format(53), "X" + xFormat.format(properties.g53HomePositionX)); // retract X
