@@ -97,14 +97,13 @@ properties = {
   //gotSecondarySpindle: false, // specifies if the machine has a secondary spindle
   looping: false, //output program for M97 looping
   numberOfRepeats: 1, //how many times to loop program
-  useSimpleThread: true, // outputs a G92 threading cycle, false outputs a G76 (standard) threading cycle
+  useSimpleThread: false, // outputs a G92 threading cycle, false outputs a G76 (standard) threading cycle
   airCleanChuck: true, // air clean chucks on transfer and eject
   safeStartAllOperations: false, // write optional blocks at the beginning of all operations that include all commands to start program
   
-  // Variables settings
+  // CUSTOM PROPERTIES
+
   // enableVariables: false, // enables use of variables in the program, use G56 for variables
-  
-  // Detail length settings
   // useDetailLengthCalculation: false, // enable calculation of detail length for Z-axis
 };
 
@@ -937,7 +936,7 @@ function onOpen() {
     writeBlock(gFormat.format(52), "Z" + xyzFormat.format(modelLength + 0.5), formatComment("Set WCS using workpiece length + 0.5mm")); // Установка программного ограничения по Z используя длину заготовки
   }
   writeBlock(gFormat.format(0), "Z0."); // Move to Z0
-  writeBlock(gFormat.format(0), "X0."); // Move to X0
+  writeBlock(gFormat.format(0), "X18."); // Move to X ( radius of stopper + 3mm )
   writeln("");
   writeBlock(mFormat.format(0), formatComment("PULL OUT WORKPIECE")); // PULL OUT WORKPIECE
   writeln("");
