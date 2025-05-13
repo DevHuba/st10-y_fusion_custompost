@@ -934,7 +934,7 @@ function onOpen() {
 
   // add workpiece length to WCS only in G56
   if (currentSection.workOffset == 3){
-    writeBlock(gFormat.format(52), "Z[#100]"); // Установка программного ограничения по Z используя длину заготовки
+    writeBlock(gFormat.format(52), "Z" + xyzFormat.format(modelLength + 0.5), formatComment("Set WCS using workpiece length + 0.5mm")); // Установка программного ограничения по Z используя длину заготовки
   }
   writeBlock(gFormat.format(0), "Z0."); // Move to Z0
   writeBlock(gFormat.format(0), "X0."); // Move to X0
