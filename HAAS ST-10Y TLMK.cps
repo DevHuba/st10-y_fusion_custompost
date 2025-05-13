@@ -936,7 +936,7 @@ function onOpen() {
     writeBlock(gFormat.format(52), "Z" + xyzFormat.format(modelLength + 0.5), formatComment("Set WCS using workpiece length + 0.5mm")); // Установка программного ограничения по Z используя длину заготовки
   }
   writeBlock(gFormat.format(0), "Z0."); // Move to Z0
-  writeBlock(gFormat.format(0), "X18."); // Move to X ( radius of stopper + 3mm )
+  writeBlock(gFormat.format(0), "X5.", formatComment("stopper tool tip 3 + X from cut off + little gap")); // Move to X ( stopper tool tip 3 + x face gap )
   writeln("");
   writeBlock(mFormat.format(0), formatComment("PULL OUT WORKPIECE")); // PULL OUT WORKPIECE
   writeln("");
