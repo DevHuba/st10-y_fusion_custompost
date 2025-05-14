@@ -432,7 +432,6 @@ function startSpindle(forceRPMMode, initialPosition, rpm) {
 
   _spindleSpeed = useConstantSurfaceSpeed ? tool.surfaceSpeed * ((unit == MM) ? 1 / 1000.0 : 1 / 12.0) : _spindleSpeed;
   
-  
   if (useConstantSurfaceSpeed && forceRPMMode) { // RPM mode is forced until move to initial position
     if (xFormat.getResultingValue(initialPosition.x) == 0) {
       _spindleSpeed = maximumSpindleSpeed;
@@ -441,14 +440,21 @@ function startSpindle(forceRPMMode, initialPosition, rpm) {
     }
   }
 
+   // Определяем тип операции
+   writeComment("OPERATION TYPE: " + (currentSection.getType() == TYPE_MILLING ? "MILLING" : currentSection.getType() == TYPE_TURNING ? "TURNING" : "UNKNOWN"));
+
    // G97/G96
-   if (machineState.axialCenterDrilling || currentSection.getType() == TYPE_MILLING) {
+   if (machineState.tapping || currentSection.getType() == TYPE_MILLING && !machineState.axialCenterDrilling) {
     writeBlock(getCode("CONSTANT_SURFACE_SPEED_OFF"), pOutput.format(_spindleSpeed), 
       (isSameDirection(currentSection.workPlane.forward, new Vector(0, 0, 1)) ? getCode("START_LIVE_TOOL_CW") :getCode("START_LIVE_TOOL_CCW")) // check if tool is axial or radial
     ); // G97 for drilling and live tools
   } else {
-    _spindleSpeed = tool.surfaceSpeed * ((unit == MM) ? 1 / 1000.0 : 1 / 12.0);
+    if (machineState.axialCenterDrilling) { //standard drilling (axial center drilling)
+      writeBlock(getCode("CONSTANT_SURFACE_SPEED_OFF"), sOutput.format(_spindleSpeed), mFormat.format(3));
+    } else {
+      _spindleSpeed = tool.surfaceSpeed * ((unit == MM) ? 1 / 1000.0 : 1 / 12.0);
     writeBlock(getCode("CONSTANT_SURFACE_SPEED_ON"), sOutput.format(_spindleSpeed), mFormat.format(3)); // G96 for turning operations + M3
+    }
   }
 
   // ORIGINAL CODE G97 S... M3/M4
@@ -1713,7 +1719,6 @@ function onSection() {
 
   // Режим подачи (G98/G99) выводим только для живого инструмента
   gFeedModeModal.reset();
-  //t
   if (currentSection.getType() == TYPE_MILLING) { 
     if ((currentSection.feedMode == FEED_PER_REVOLUTION) || machineState.tapping || machineState.axialCenterDrilling) {
       writeBlock(getCode("FEED_MODE_UNIT_REV")); // unit/rev G99
@@ -1757,12 +1762,11 @@ function onSection() {
 
       // CUSTOM CODE delete
       //Check for radial tool
-      //tt
       writeComment("MACHINING DIRECTION: " + (getMachiningDirection(currentSection) == MACHINING_DIRECTION_AXIAL ? "AXIAL" : getMachiningDirection(currentSection) == MACHINING_DIRECTION_RADIAL ? "RADIAL" : "INDEXING"));
       if (machineState.axialCenterDrilling) {
         writeComment("AXIAL CENTER DRILLING ACTIVE - USING MAIN SPINDLE");
       }
-
+      //t
       // ORIGINAL CODE prints multiple times G97/G96 line
       startSpindle(true, getFramePosition(currentSection.getInitialPosition()));
     }
@@ -3871,20 +3875,22 @@ function onSectionEnd() {
   // Выключаем СОЖ
   onCommand(COMMAND_COOLANT_OFF);
 
-  // Режим подачи (G98/G99) выводим только для живого инструмента
+  // Определяем тип инструмента (живой или токарный)
+  var isSectionMilling = currentSection.getType() == TYPE_MILLING;
+
+
+  // Feed mode switch only for live tool or taping
   gFeedModeModal.reset();
-  if (currentSection.getType() == TYPE_MILLING || machineState.tapping) { // Только для фрезерных операций (живой инструмент) or taping
+  if (isSectionMilling || machineState.tapping) {
     writeBlock(getCode("FEED_MODE_UNIT_REV")); // unit/rev G99
   }
-  // Для токарных операций не выводим режим подачи, так как он уже подразумевается
   
-  // Определяем тип инструмента (живой или токарный)
-  var isLiveTool = currentSection.getType() == TYPE_MILLING;
+
   
   // Возвращаем оси в зависимости от типа инструмента
   if (hasNextSection()) {
     writeln("");
-    if (isLiveTool) {
+    if (isSectionMilling) {
       // Для active tool возвращаем все оси Y, X, Z
       if (gotYAxis) {
         writeBlock(gFormat.format(53), gMotionModal.format(0), "Y" + yFormat.format(properties.g53HomePositionY)); // retract Y first
