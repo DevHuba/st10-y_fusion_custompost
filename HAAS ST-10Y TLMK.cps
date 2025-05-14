@@ -71,7 +71,7 @@ properties = {
   // showSequenceNumbers: false, // show sequence numbers
   // sequenceNumberStart: 1, // first sequence number
   // sequenceNumberIncrement: 1, // increment for sequence numbers
-  stopperToolNumber: 1, // tool that must go at start of program to pick G56
+  stopperToolNumber: 4, // tool that must go at start of program to pick G56
   separateWordsWithSpace: true, // specifies that the words should be separated with a white space
   useRadius: true, // specifies that arcs should be output using the radius (R word) instead of the I, J, and K words.
   maximumSpindleSpeed: 2500, // specifies the maximum spindle speed
@@ -440,9 +440,7 @@ function startSpindle(forceRPMMode, initialPosition, rpm) {
     }
   }
 
-   // Определяем тип операции
-   writeComment("OPERATION TYPE: " + (currentSection.getType() == TYPE_MILLING ? "MILLING" : currentSection.getType() == TYPE_TURNING ? "TURNING" : "UNKNOWN"));
-
+   
    // G97/G96
    if (machineState.tapping || currentSection.getType() == TYPE_MILLING && !machineState.axialCenterDrilling) {
     writeBlock(getCode("CONSTANT_SURFACE_SPEED_OFF"), pOutput.format(_spindleSpeed), 
@@ -456,6 +454,7 @@ function startSpindle(forceRPMMode, initialPosition, rpm) {
     writeBlock(getCode("CONSTANT_SURFACE_SPEED_ON"), sOutput.format(_spindleSpeed), mFormat.format(3)); // G96 for turning operations + M3
     }
   }
+
 
   // ORIGINAL CODE G97 S... M3/M4
 
@@ -495,8 +494,6 @@ function startSpindle(forceRPMMode, initialPosition, rpm) {
   //   }
   //   break;
   // }
-
-
 
 
 
@@ -1760,13 +1757,6 @@ function onSection() {
       }
       skipBlock = !insertToolCall && !spindleChange;
 
-      // CUSTOM CODE delete
-      //Check for radial tool
-      writeComment("MACHINING DIRECTION: " + (getMachiningDirection(currentSection) == MACHINING_DIRECTION_AXIAL ? "AXIAL" : getMachiningDirection(currentSection) == MACHINING_DIRECTION_RADIAL ? "RADIAL" : "INDEXING"));
-      if (machineState.axialCenterDrilling) {
-        writeComment("AXIAL CENTER DRILLING ACTIVE - USING MAIN SPINDLE");
-      }
-      //t
       // ORIGINAL CODE prints multiple times G97/G96 line
       startSpindle(true, getFramePosition(currentSection.getInitialPosition()));
     }
