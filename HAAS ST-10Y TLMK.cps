@@ -1713,11 +1713,12 @@ function onSection() {
 
   // Режим подачи (G98/G99) выводим только для живого инструмента
   gFeedModeModal.reset();
-  if (currentSection.getType() == TYPE_MILLING) { // Только для фрезерных операций (живой инструмент)
+  //t
+  if (currentSection.getType() == TYPE_MILLING) { 
     if ((currentSection.feedMode == FEED_PER_REVOLUTION) || machineState.tapping || machineState.axialCenterDrilling) {
-      writeBlock(getCode("FEED_MODE_UNIT_REV")); // unit/rev
+      writeBlock(getCode("FEED_MODE_UNIT_REV")); // unit/rev G99
     } else {
-      writeBlock(getCode("FEED_MODE_UNIT_MIN")); // unit/min
+      writeBlock(getCode("FEED_MODE_UNIT_MIN")); // unit/min G98
     }
   }
   // Для токарных операций не выводим режим подачи, так как он уже подразумевается
@@ -1754,8 +1755,15 @@ function onSection() {
       }
       skipBlock = !insertToolCall && !spindleChange;
 
+      // CUSTOM CODE delete
+      //Check for radial tool
+      //tt
+      writeComment("MACHINING DIRECTION: " + (getMachiningDirection(currentSection) == MACHINING_DIRECTION_AXIAL ? "AXIAL" : getMachiningDirection(currentSection) == MACHINING_DIRECTION_RADIAL ? "RADIAL" : "INDEXING"));
+      if (machineState.axialCenterDrilling) {
+        writeComment("AXIAL CENTER DRILLING ACTIVE - USING MAIN SPINDLE");
+      }
+
       // ORIGINAL CODE prints multiple times G97/G96 line
-      //t
       startSpindle(true, getFramePosition(currentSection.getInitialPosition()));
     }
   }
@@ -3865,12 +3873,8 @@ function onSectionEnd() {
 
   // Режим подачи (G98/G99) выводим только для живого инструмента
   gFeedModeModal.reset();
-  if (currentSection.getType() == TYPE_MILLING) { // Только для фрезерных операций (живой инструмент)
-    if ((currentSection.feedMode == FEED_PER_REVOLUTION) || machineState.tapping || machineState.axialCenterDrilling) {
-      writeBlock(getCode("FEED_MODE_UNIT_MIN")); // unit/min
-    } else {
-      writeBlock(getCode("FEED_MODE_UNIT_REV")); // unit/rev
-    }
+  if (currentSection.getType() == TYPE_MILLING || machineState.tapping) { // Только для фрезерных операций (живой инструмент) or taping
+    writeBlock(getCode("FEED_MODE_UNIT_REV")); // unit/rev G99
   }
   // Для токарных операций не выводим режим подачи, так как он уже подразумевается
   
