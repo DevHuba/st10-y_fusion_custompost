@@ -447,11 +447,12 @@ function startSpindle(forceRPMMode, initialPosition, rpm) {
       (isSameDirection(currentSection.workPlane.forward, new Vector(0, 0, 1)) ? getCode("START_LIVE_TOOL_CW") :getCode("START_LIVE_TOOL_CCW")) // check if tool is axial or radial
     ); // G97 for drilling and live tools
   } else {
-    if (machineState.axialCenterDrilling) { //standard drilling (axial center drilling)
+    //check for axial drilling and thread turning with turning tool
+    if (machineState.axialCenterDrilling || hasParameter("operation-strategy") && getParameter("operation-strategy") == "turningThread") {
       writeBlock(getCode("CONSTANT_SURFACE_SPEED_OFF"), sOutput.format(_spindleSpeed), mFormat.format(3));
     } else {
       _spindleSpeed = tool.surfaceSpeed * ((unit == MM) ? 1 / 1000.0 : 1 / 12.0);
-    writeBlock(getCode("CONSTANT_SURFACE_SPEED_ON"), sOutput.format(_spindleSpeed), mFormat.format(3)); // G96 for turning operations + M3
+      writeBlock(getCode("CONSTANT_SURFACE_SPEED_ON"), sOutput.format(_spindleSpeed), mFormat.format(3)); // G96 for turning operations + M3
     }
   }
 
