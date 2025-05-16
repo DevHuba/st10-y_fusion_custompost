@@ -1074,6 +1074,7 @@ function FeedContext(id, description, feed) {
   this.feed = feed;
 }
 
+//ORIGINAL CODE feed F
 function getFeed(f) {
   if (activeMovements) {
     var feedContext = activeMovements[movement];
@@ -1089,7 +1090,6 @@ function getFeed(f) {
     }
     currentFeedId = undefined; // force Q feed next time
   }
-  //a
   return feedOutput.format(f); // use feed value
 }
 
