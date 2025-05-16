@@ -1089,6 +1089,7 @@ function getFeed(f) {
     }
     currentFeedId = undefined; // force Q feed next time
   }
+  //a
   return feedOutput.format(f); // use feed value
 }
 
