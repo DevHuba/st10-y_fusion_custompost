@@ -440,17 +440,27 @@ function startSpindle(forceRPMMode, initialPosition, rpm) {
     }
   }
 
-   
-   // G97/G96
-   if (machineState.tapping || currentSection.getType() == TYPE_MILLING && !machineState.axialCenterDrilling) {
-    writeBlock(getCode("CONSTANT_SURFACE_SPEED_OFF"), pOutput.format(_spindleSpeed), 
+  // save initial position for check that tool is in center or not
+  var initialPosition = getFramePosition(currentSection.getInitialPosition());
+
+   // ORIGINAL CODE MODIFIED
+   if (currentSection.getType() == TYPE_MILLING && !machineState.axialCenterDrilling || machineState.tapping)  {
+    if (Math.abs(initialPosition.x) < 0.001) {
+      //taping tool in center
+      writeBlock(getCode("CONSTANT_SURFACE_SPEED_OFF"), sOutput.format(_spindleSpeed), mFormat.format(3));
+    } else {
+      //taping tool out of center
+      writeBlock(getCode("CONSTANT_SURFACE_SPEED_OFF"), pOutput.format(_spindleSpeed), 
       (isSameDirection(currentSection.workPlane.forward, new Vector(0, 0, 1)) ? getCode("START_LIVE_TOOL_CW") :getCode("START_LIVE_TOOL_CCW")) // check if tool is axial or radial
-    ); // G97 for drilling and live tools
+      );
+    }
+  // G97 for drilling and live tools
   } else {
-    //check for axial drilling and thread turning with turning tool
+    //G97 for turning operations and thread turning with turning tool and turning tool in center
     if (machineState.axialCenterDrilling || hasParameter("operation-strategy") && getParameter("operation-strategy") == "turningThread") {
       writeBlock(getCode("CONSTANT_SURFACE_SPEED_OFF"), sOutput.format(_spindleSpeed), mFormat.format(3));
     } else {
+      //G96 for all another
       _spindleSpeed = tool.surfaceSpeed * ((unit == MM) ? 1 / 1000.0 : 1 / 12.0);
       writeBlock(getCode("CONSTANT_SURFACE_SPEED_ON"), sOutput.format(_spindleSpeed), mFormat.format(3)); // G96 for turning operations + M3
     }
@@ -907,6 +917,8 @@ function onOpen() {
   //ORIGINAL CODE SPINDLE SPEED
   writeBlock(gFormat.format(50), sOutput.format(properties.maximumSpindleSpeed));
   sOutput.reset();   
+  
+  writeBlock(gFormat.format(53), "X" + xFormat.format(properties.g53HomePositionX), "Z" + zFormat.format(properties.g53HomePositionZ), "Y" + yFormat.format(properties.g53HomePositionY)); // retract X
 
   writeln("");
 
@@ -946,7 +958,7 @@ function onOpen() {
   writeln("");
   writeBlock(gFormat.format(0), "Z5."); // Move to X0
 
-  // Для обычного токарного инструмента возвращаем только оси X и Z
+  // Возвращаем только оси X и Z
   writeBlock(gFormat.format(53), "X" + xFormat.format(properties.g53HomePositionX)); // retract X
   writeBlock(gFormat.format(53), "Z" + zFormat.format(currentSection.spindle == SPINDLE_SECONDARY ? properties.g53HomePositionSubZ : properties.g53HomePositionZ)); // retract Z
   writeln("");
@@ -1442,7 +1454,7 @@ function setSpindleOrientationTurning(section) {
 var bAxisOrientationTurning = new Vector(0, 0, 0);
 
 function onSection() {
-
+  
   // Detect machine configuration
   machineConfiguration = (currentSection.spindle == SPINDLE_PRIMARY) ? machineConfigurationMainSpindle : machineConfigurationSubSpindle;
   if (!gotBAxis) {
@@ -1919,6 +1931,8 @@ function onSection() {
     }
     // writeComment((getMachineConfigurationAsText(machineConfiguration)));
   }
+
+
 }
 
 function getPlane() {
@@ -3213,6 +3227,8 @@ function onCyclePoint(x, y, z) {
   // ORIGINAL CODE printed multiple times G17/G18/G19 plane
   // writeBlock(gPlaneModal.format(getPlane()));
 
+  //a
+
   var gCycleTapping;
   switch (cycleType) {
   case "tapping-with-chip-breaking":
@@ -3226,7 +3242,7 @@ function onCyclePoint(x, y, z) {
         gCycleTapping = 195;
       }
     } else { // axial
-      if (tool.type == TOOL_TAP_LEFT_HAND) {
+        if (tool.type == TOOL_TAP_LEFT_HAND ) {
         gCycleTapping = machineState.axialCenterDrilling ? 184 : 186;
       } else {
         gCycleTapping = machineState.axialCenterDrilling ? 84 : 95;
@@ -4000,4 +4016,31 @@ function onClose() {
 // <<<<< INCLUDED FROM ../common/haas lathe.cps
 
 properties.maximumSpindleSpeed = 2500;
+
+function onMovement(movement) {
+  if (movement == MOVEMENT_RAPID) {
+    writeBlock("(RAPID MOVEMENT)");
+    writeBlock("(CURRENT POSITION:)");
+    
+    var x = xOutput.getCurrent();
+    var z = zOutput.getCurrent();
+    
+    if (x !== undefined) {
+      writeBlock("(X: " + xFormat.format(x) + ")");
+    }
+    if (z !== undefined) {
+      writeBlock("(Z: " + zFormat.format(z) + ")");
+    }
+    
+    // Проверяем положение по X
+    if (x !== undefined) {
+      if (Math.abs(x) < 0.001) {
+        writeBlock("(TOOL IS IN CENTER POSITION)");
+      } else {
+        writeBlock("(TOOL IS OFF CENTER)");
+        writeBlock("(DISTANCE FROM CENTER: " + xFormat.format(Math.abs(x)) + ")");
+      }
+    }
+  }
+}
 
