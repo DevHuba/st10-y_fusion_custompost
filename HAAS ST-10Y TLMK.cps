@@ -410,6 +410,11 @@ function isSpindleSpeedDifferent() {
   return false;
 }
 
+function isToolInCenterX0() {
+  var initialPosition = getFramePosition(currentSection.getInitialPosition());
+  return Math.abs(initialPosition.x) < 0.001;
+}
+
 function startSpindle(forceRPMMode, initialPosition, rpm) {
   var _skipBlock = skipBlock;
   var _spindleSpeed = spindleSpeed;
@@ -445,7 +450,7 @@ function startSpindle(forceRPMMode, initialPosition, rpm) {
 
    // ORIGINAL CODE MODIFIED
    if (currentSection.getType() == TYPE_MILLING && !machineState.axialCenterDrilling || machineState.tapping)  {
-    if (Math.abs(initialPosition.x) < 0.001) {
+    if (isToolInCenterX0()) {
       //taping tool in center
       writeBlock(getCode("CONSTANT_SURFACE_SPEED_OFF"), sOutput.format(_spindleSpeed), mFormat.format(3));
     } else {
@@ -1706,8 +1711,10 @@ function onSection() {
 */
   }
 
+  //b
+
   if (!machineState.stockTransferIsActive) {
-    if (machineState.isTurningOperation || machineState.axialCenterDrilling) {
+    if (machineState.isTurningOperation || machineState.axialCenterDrilling || isToolInCenterX0()) {
       skipBlock = !insertToolCall  && (machineState.cAxisIsEngaged != undefined);
       // writeBlock(conditional(machineState.cAxisIsEngaged || machineState.cAxisIsEngaged == undefined), getCode("DISENGAGE_C_AXIS"));
     } else { // milling
@@ -2096,7 +2103,9 @@ function updateMachiningMode(section) {
     // turning or multi axis, keep false
   }
 
-  if (machineState.axialCenterDrilling) {
+  //c
+
+  if (machineState.axialCenterDrilling || isToolInCenterX0()) {
     cOutput.disable();
   } else {
     cOutput.enable();
@@ -3243,9 +3252,10 @@ function onCyclePoint(x, y, z) {
       }
     } else { // axial
         if (tool.type == TOOL_TAP_LEFT_HAND ) {
-        gCycleTapping = machineState.axialCenterDrilling ? 184 : 186;
+      //check that tool is in center or not and is center drilling or not
+        gCycleTapping = machineState.axialCenterDrilling || isToolInCenterX0() ? 184 : 186;
       } else {
-        gCycleTapping = machineState.axialCenterDrilling ? 84 : 95;
+        gCycleTapping = machineState.axialCenterDrilling || isToolInCenterX0() ? 84 : 95;
       }
     }
     break;
@@ -3630,7 +3640,8 @@ function onCommand(command) {
     setCoolant(tool.coolant);
     break;
   case COMMAND_START_SPINDLE:
-    if (machineState.isTurningOperation || machineState.axialCenterDrilling) {
+    //d
+    if (machineState.isTurningOperation || machineState.axialCenterDrilling || isToolInCenterX0()) {
       if (currentSection.spindle == SPINDLE_PRIMARY) {
         writeBlock(tool.clockwise ? getCode("START_MAIN_SPINDLE_CW") : getCode("START_MAIN_SPINDLE_CCW"));
       } else {
@@ -3830,9 +3841,11 @@ function onSectionEnd() {
 
   // CUSTOM CODE STOP SPINDLE M5 , M135 , M145
 
-  if (currentSection.getType() == TYPE_MILLING && ((currentSection.feedMode == FEED_PER_MINUTE) || machineState.tapping || machineState.axialCenterDrilling)) {
+  //e
+
+  if ((currentSection.getType() == TYPE_MILLING && currentSection.feedMode == FEED_PER_MINUTE || machineState.tapping) && !isToolInCenterX0()) {
     writeBlock(mFormat.format(135))
-  } else if (currentSection.getType() == TYPE_TURNING) {  // для токарных операций
+  } else if (currentSection.getType() == TYPE_TURNING || isToolInCenterX0()) {  // for turning operations or tool in x0
     writeBlock(mFormat.format(5));
   } else if (machineState.subSpindleIsActive) {
     writeBlock(mFormat.format(145));
