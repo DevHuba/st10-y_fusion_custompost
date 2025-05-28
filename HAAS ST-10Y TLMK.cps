@@ -3836,7 +3836,7 @@ function onSectionEnd() {
 
   // CUSTOM CODE STOP SPINDLE M5 , M135 , M145
 
-  if ((currentSection.getType() == TYPE_MILLING && currentSection.feedMode == FEED_PER_MINUTE || machineState.tapping) && !isToolInCenterX0()) {
+  if ((currentSection.getType() == TYPE_MILLING && currentSection.feedMode == FEED_PER_MINUTE || machineState.tapping || machineState.axialCenterDrilling) && !isToolInCenterX0()) {
     writeBlock(mFormat.format(135))
   } else if (currentSection.getType() == TYPE_TURNING || isToolInCenterX0()) {  // for turning operations or tool in x0
     writeBlock(mFormat.format(5));
