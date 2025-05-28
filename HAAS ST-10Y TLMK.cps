@@ -1278,7 +1278,7 @@ function setWorkPlane(abc) {
     conditional(machineConfiguration.isMachineCoordinate(2), "C" + abcFormat.format(abc.z))
   );
 
-  if (!currentSection.isMultiAxis() && !machineState.usePolarMode && !machineState.useXZCMode) {
+  if (!currentSection.isMultiAxis() && !machineState.usePolarMode && !machineState.useXZCMode && !isToolInCenterX0()) {
     skipBlock = _skipBlock;
     onCommand(COMMAND_LOCK_MULTI_AXIS);
     currentWorkPlaneABC = abc;
@@ -1711,8 +1711,6 @@ function onSection() {
 */
   }
 
-  //b
-
   if (!machineState.stockTransferIsActive) {
     if (machineState.isTurningOperation || machineState.axialCenterDrilling || isToolInCenterX0()) {
       skipBlock = !insertToolCall  && (machineState.cAxisIsEngaged != undefined);
@@ -2102,8 +2100,6 @@ function updateMachiningMode(section) {
   } else {
     // turning or multi axis, keep false
   }
-
-  //c
 
   if (machineState.axialCenterDrilling || isToolInCenterX0()) {
     cOutput.disable();
@@ -3640,7 +3636,6 @@ function onCommand(command) {
     setCoolant(tool.coolant);
     break;
   case COMMAND_START_SPINDLE:
-    //d
     if (machineState.isTurningOperation || machineState.axialCenterDrilling || isToolInCenterX0()) {
       if (currentSection.spindle == SPINDLE_PRIMARY) {
         writeBlock(tool.clockwise ? getCode("START_MAIN_SPINDLE_CW") : getCode("START_MAIN_SPINDLE_CCW"));
@@ -3841,8 +3836,6 @@ function onSectionEnd() {
 
   // CUSTOM CODE STOP SPINDLE M5 , M135 , M145
 
-  //e
-
   if ((currentSection.getType() == TYPE_MILLING && currentSection.feedMode == FEED_PER_MINUTE || machineState.tapping) && !isToolInCenterX0()) {
     writeBlock(mFormat.format(135))
   } else if (currentSection.getType() == TYPE_TURNING || isToolInCenterX0()) {  // for turning operations or tool in x0
@@ -3910,8 +3903,9 @@ function onSectionEnd() {
   
   // Возвращаем оси в зависимости от типа инструмента
   if (hasNextSection()) {
+    //b
     writeln("");
-    if (isSectionMilling) {
+    if (isSectionMilling && !isToolInCenterX0()) {
       // Для active tool возвращаем все оси Y, X, Z
       if (gotYAxis) {
         writeBlock(gFormat.format(53), gMotionModal.format(0), "Y" + yFormat.format(properties.g53HomePositionY)); // retract Y first
@@ -4029,31 +4023,4 @@ function onClose() {
 // <<<<< INCLUDED FROM ../common/haas lathe.cps
 
 properties.maximumSpindleSpeed = 2500;
-
-function onMovement(movement) {
-  if (movement == MOVEMENT_RAPID) {
-    writeBlock("(RAPID MOVEMENT)");
-    writeBlock("(CURRENT POSITION:)");
-    
-    var x = xOutput.getCurrent();
-    var z = zOutput.getCurrent();
-    
-    if (x !== undefined) {
-      writeBlock("(X: " + xFormat.format(x) + ")");
-    }
-    if (z !== undefined) {
-      writeBlock("(Z: " + zFormat.format(z) + ")");
-    }
-    
-    // Проверяем положение по X
-    if (x !== undefined) {
-      if (Math.abs(x) < 0.001) {
-        writeBlock("(TOOL IS IN CENTER POSITION)");
-      } else {
-        writeBlock("(TOOL IS OFF CENTER)");
-        writeBlock("(DISTANCE FROM CENTER: " + xFormat.format(Math.abs(x)) + ")");
-      }
-    }
-  }
-}
 
