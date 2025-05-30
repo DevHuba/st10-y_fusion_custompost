@@ -449,13 +449,15 @@ function startSpindle(forceRPMMode, initialPosition, rpm) {
   var initialPosition = getFramePosition(currentSection.getInitialPosition());
 
    // ORIGINAL CODE MODIFIED
-   if (currentSection.getType() == TYPE_MILLING && !machineState.axialCenterDrilling || machineState.tapping)  {
+   if (currentSection.getType() == TYPE_MILLING 
+    && !machineState.axialCenterDrilling
+    || machineState.tapping)  {
     if (isToolInCenterX0()) {
       //taping tool in center
-      // no need to print S and so one just S (spindle speed) before G95
-      // writeBlock(getCode("CONSTANT_SURFACE_SPEED_OFF"), sOutput.format(_spindleSpeed), mFormat.format(3));
-    } else {
+      writeBlock(getCode("CONSTANT_SURFACE_SPEED_OFF"), sOutput.format(_spindleSpeed), mFormat.format(3));
+    } else if (!isToolInCenterX0() && machineState.tapping) {
       //taping tool out of center
+    } else {
       writeBlock(getCode("CONSTANT_SURFACE_SPEED_OFF"), pOutput.format(_spindleSpeed), 
       (isSameDirection(currentSection.workPlane.forward, new Vector(0, 0, 1)) ? getCode("START_LIVE_TOOL_CW") :getCode("START_LIVE_TOOL_CCW")) // check if tool is axial or radial
       );
