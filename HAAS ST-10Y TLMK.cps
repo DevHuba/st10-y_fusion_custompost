@@ -923,7 +923,13 @@ function onOpen() {
   writeBlock(gFormat.format(50), sOutput.format(properties.maximumSpindleSpeed));
   sOutput.reset();   
   
-  writeBlock(gFormat.format(53), "X" + xFormat.format(properties.g53HomePositionX), "Z" + zFormat.format(properties.g53HomePositionZ), "Y" + yFormat.format(properties.g53HomePositionY)); // retract X
+  // retract x, z, y  
+  writeBlock(
+    gFormat.format(28), 
+    "U" + xFormat.format(properties.g53HomePositionX), 
+    "W" + zFormat.format(properties.g53HomePositionZ), 
+    "V" + yFormat.format(properties.g53HomePositionY)
+  );
 
   writeln("");
 
