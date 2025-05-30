@@ -457,6 +457,7 @@ function startSpindle(forceRPMMode, initialPosition, rpm) {
       writeBlock(getCode("CONSTANT_SURFACE_SPEED_OFF"), sOutput.format(_spindleSpeed), mFormat.format(3));
     } else if (!isToolInCenterX0() && machineState.tapping) {
       //taping tool out of center
+      // nothing to write G95 cycle
     } else {
       writeBlock(getCode("CONSTANT_SURFACE_SPEED_OFF"), pOutput.format(_spindleSpeed), 
       (isSameDirection(currentSection.workPlane.forward, new Vector(0, 0, 1)) ? getCode("START_LIVE_TOOL_CW") :getCode("START_LIVE_TOOL_CCW")) // check if tool is axial or radial
@@ -3241,8 +3242,6 @@ function onCyclePoint(x, y, z) {
   // ORIGINAL CODE printed multiple times G17/G18/G19 plane
   // writeBlock(gPlaneModal.format(getPlane()));
 
-  //a
-
   var gCycleTapping;
   switch (cycleType) {
   case "tapping-with-chip-breaking":
@@ -3386,6 +3385,9 @@ function onCyclePoint(x, y, z) {
         );
       } else {
         forceXYZ();
+        //a
+        //axial G95 needs S before G95
+        writeBlock(sOutput.format(spindleSpeed));
         writeBlock(
           gCycleModal.format(gCycleTapping),
           getCommonCycle(x, y, z, cycle.retract),
@@ -3401,6 +3403,8 @@ function onCyclePoint(x, y, z) {
         writeBlock(gMotionModal.format(0), zOutput.format(z), yOutput.format(y));
         writeBlock(gMotionModal.format(0), xOutput.format(cycle.retract));
       }
+      //axial G95 needs S before G95
+      writeBlock(sOutput.format(spindleSpeed));
       writeBlock(
         gCycleModal.format(gCycleTapping),
         getCommonCycle(x, y, z, (gPlaneModal.getCurrent() == 19) ? undefined : cycle.retract),
@@ -3415,6 +3419,8 @@ function onCyclePoint(x, y, z) {
         writeBlock(gMotionModal.format(0), zOutput.format(z), yOutput.format(y));
         writeBlock(gMotionModal.format(0), xOutput.format(cycle.retract));
       }
+      //axial G95 needs S before G95
+      writeBlock(sOutput.format(spindleSpeed));
       writeBlock(
         gCycleModal.format(gCycleTapping),
         getCommonCycle(x, y, z, (gPlaneModal.getCurrent() == 19) ? undefined : cycle.retract),
@@ -3429,6 +3435,8 @@ function onCyclePoint(x, y, z) {
         writeBlock(gMotionModal.format(0), zOutput.format(z), yOutput.format(y));
         writeBlock(gMotionModal.format(0), xOutput.format(cycle.retract));
       }
+      //axial G95 needs S before G95
+      writeBlock(sOutput.format(spindleSpeed));
 
       // Parameter 57 bit 6, REPT RIG TAP, is set to 1 (On)
       // On Mill software versions12.09 and above, REPT RIG TAP has been moved from the Parameters to Setting 133
