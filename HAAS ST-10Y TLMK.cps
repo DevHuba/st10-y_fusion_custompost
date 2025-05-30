@@ -452,7 +452,8 @@ function startSpindle(forceRPMMode, initialPosition, rpm) {
    if (currentSection.getType() == TYPE_MILLING && !machineState.axialCenterDrilling || machineState.tapping)  {
     if (isToolInCenterX0()) {
       //taping tool in center
-      writeBlock(getCode("CONSTANT_SURFACE_SPEED_OFF"), sOutput.format(_spindleSpeed), mFormat.format(3));
+      // no need to print S and so one just S (spindle speed) before G95
+      // writeBlock(getCode("CONSTANT_SURFACE_SPEED_OFF"), sOutput.format(_spindleSpeed), mFormat.format(3));
     } else {
       //taping tool out of center
       writeBlock(getCode("CONSTANT_SURFACE_SPEED_OFF"), pOutput.format(_spindleSpeed), 
