@@ -1745,10 +1745,13 @@ function onSection() {
 
   // Режим подачи (G98/G99) выводим только для живого инструмента
   gFeedModeModal.reset();
-  if (currentSection.getType() == TYPE_MILLING) { 
-    if ((currentSection.feedMode == FEED_PER_REVOLUTION) || machineState.tapping || machineState.axialCenterDrilling) {
+  if (currentSection.getType() == TYPE_MILLING) {
+    //ensure that tool is drill
+    var isDrill = tool.type == TOOL_DRILL;
+    if ((currentSection.feedMode == FEED_PER_REVOLUTION) || machineState.tapping || machineState.axialCenterDrilling || isDrill && isToolInCenterX0()) {
       writeBlock(getCode("FEED_MODE_UNIT_REV")); // unit/rev G99
     } else {
+      writeComment("C axis");
       writeBlock(getCode("FEED_MODE_UNIT_MIN")); // unit/min G98
     }
   }
@@ -3385,7 +3388,6 @@ function onCyclePoint(x, y, z) {
         );
       } else {
         forceXYZ();
-        //a
         //axial G95 needs S before G95
         writeBlock(sOutput.format(spindleSpeed));
         writeBlock(
