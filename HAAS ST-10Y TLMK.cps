@@ -1824,7 +1824,7 @@ function onSection() {
 
   // MODIFIED CODE only print plane if its milling operation G19, G18, G17
 
-  if (currentSection.getType() == TYPE_MILLING && !isToolDrill) {
+  if (currentSection.getType() == TYPE_MILLING && !isToolDrill && !isToolInCenterX0()) {
     writeBlock(gPlaneModal.format(getPlane())); // take plane for milling
   }
 
