@@ -1812,8 +1812,6 @@ function onSection() {
     writeBlock(gMotionModal.format(52),"Z#100");
   }
 
-  // set coolant after we have positioned at Z
-  setCoolant(tool.coolant);
 
   if (currentSection.partCatcher) {
     engagePartCatcher(true);
@@ -1829,6 +1827,8 @@ function onSection() {
   if (currentSection.getType() == TYPE_MILLING && !isToolDrill) {
     writeBlock(gPlaneModal.format(getPlane())); // take plane for milling
   }
+
+  // MULTI AXIS PREPARATION M15; G0 C0;
   
   var abc = new Vector(0, 0, 0);
   if (machineConfiguration.isMultiAxisConfiguration()) {
@@ -1865,6 +1865,9 @@ function onSection() {
     }
     setRotation(remaining);
   }
+
+
+
   forceAny();
   if (abc !== undefined) {
     if (!currentSection.isMultiAxis()) {
@@ -1920,6 +1923,17 @@ function onSection() {
       writeBlock(gMotionModal.format(0), xOutput.format(initialPosition.x), yOutput.format(initialPosition.y));
     }
   }
+
+
+  
+
+  
+  // set coolant after we have positioned at Z and X
+  setCoolant(tool.coolant); // /M8
+
+
+
+
 
   // enable SFM spindle speed
   // ORIGINAL CODE prints multiple times G97/ G96
