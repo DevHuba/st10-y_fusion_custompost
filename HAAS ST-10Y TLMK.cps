@@ -1470,6 +1470,8 @@ var bAxisOrientationTurning = new Vector(0, 0, 0);
 
 function onSection() {
   
+
+
   // Detect machine configuration
   machineConfiguration = (currentSection.spindle == SPINDLE_PRIMARY) ? machineConfigurationMainSpindle : machineConfigurationSubSpindle;
   if (!gotBAxis) {
@@ -1743,15 +1745,14 @@ function onSection() {
 
   // CUSTOM CODE G98/G99 print only for live tool
 
+  var isToolDrill = tool.type == TOOL_DRILL;
+
   // Режим подачи (G98/G99) выводим только для живого инструмента
   gFeedModeModal.reset();
   if (currentSection.getType() == TYPE_MILLING) {
-    //ensure that tool is drill
-    var isDrill = tool.type == TOOL_DRILL;
-    if ((currentSection.feedMode == FEED_PER_REVOLUTION) || machineState.tapping || machineState.axialCenterDrilling || isDrill && isToolInCenterX0()) {
+    if ((currentSection.feedMode == FEED_PER_REVOLUTION) || machineState.tapping || machineState.axialCenterDrilling || isToolDrill && isToolInCenterX0()) {
       writeBlock(getCode("FEED_MODE_UNIT_REV")); // unit/rev G99
     } else {
-      writeComment("C axis");
       writeBlock(getCode("FEED_MODE_UNIT_MIN")); // unit/min G98
     }
   }
@@ -1825,7 +1826,7 @@ function onSection() {
 
   // MODIFIED CODE only print plane if its milling operation G19, G18, G17
 
-  if (currentSection.getType() == TYPE_MILLING) { // check if active tool
+  if (currentSection.getType() == TYPE_MILLING && !isToolDrill) {
     writeBlock(gPlaneModal.format(getPlane())); // take plane for milling
   }
   
@@ -3208,7 +3209,8 @@ function writeCycleClearance() {
       writeBlock(gMotionModal.format(0), xOutput.format(cycle.clearance));
       break;
     default:
-      error(localize("Unsupported drilling orientation."));
+      //dont bring error if drilling in G17
+      // error(localize("Unsupported drilling orientation."));
       return;
     }
   }
