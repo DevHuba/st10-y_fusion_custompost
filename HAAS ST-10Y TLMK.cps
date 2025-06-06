@@ -1964,14 +1964,15 @@ function onSection() {
 
 }
 
+//b
 function getPlane() {
-
-  // ORIGINAL CODE check for G17/G18/G19 plane
-
+  if (machineState.isTurningOperation) {
+    return undefined; // Don't output plane for turning operations as G18 is default
+  }
+  
   if (getMachiningDirection(currentSection) == MACHINING_DIRECTION_AXIAL) { // axial
     if (machineState.useXZCMode ||
-        (currentSection.hasParameter("operation-strategy") && (currentSection.getParameter("operation-strategy") == "drill")) ||
-        machineState.isTurningOperation) {
+        (currentSection.hasParameter("operation-strategy") && (currentSection.getParameter("operation-strategy") == "drill"))) {
       return 18;
     } else {
       return 17; // G112 and XY milling only
@@ -2820,7 +2821,8 @@ function onCircular(clockwise, cx, cy, cz, x, y, z, feed) {
         if (!cFormat.areDifferent(c, cOutput.getCurrent())) {
           validate(getCircularSweep() < Math.PI, localize("Circular sweep exceeds limit."));
           var start = getCurrentPosition();
-          writeBlock(gPlaneModal.format(18), gMotionModal.format(clockwise ? 2 : 3), xOutput.format(getModulus(x, y)), cOutput.format(c), zOutput.format(z), iOutput.format(cx - start.x, 0), kOutput.format(cz - start.z, 0), getFeed(feed));
+          // G18 doesnt print because its default
+          writeBlock(gMotionModal.format(clockwise ? 2 : 3), xOutput.format(getModulus(x, y)), cOutput.format(c), zOutput.format(z), iOutput.format(cx - start.x, 0), kOutput.format(cz - start.z, 0), getFeed(feed));
           previousABC.setZ(c);
           return;
         }
@@ -2875,7 +2877,8 @@ function onCircular(clockwise, cx, cy, cz, x, y, z, feed) {
         linearize(tolerance);
         return;
       }
-      writeBlock(gPlaneModal.format(18), gMotionModal.format(clockwise ? 2 : 3), iOutput.format(cx - start.x, 0), kOutput.format(cz - start.z, 0), getFeed(feed));
+      // G18 doesnt print because its default
+      writeBlock(gMotionModal.format(clockwise ? 2 : 3), iOutput.format(cx - start.x, 0), kOutput.format(cz - start.z, 0), getFeed(feed));
       break;
     case PLANE_YZ:
       if (machineState.usePolarMode) {
@@ -2905,7 +2908,8 @@ function onCircular(clockwise, cx, cy, cz, x, y, z, feed) {
         linearize(tolerance);
         return;
       }
-      writeBlock(gPlaneModal.format(18), gMotionModal.format(clockwise ? 2 : 3), xOutput.format(x), yOutput.format(y), zOutput.format(z), iOutput.format(cx - start.x, 0), kOutput.format(cz - start.z, 0), getFeed(feed));
+      // G18 doesnt print because its default
+      writeBlock(gMotionModal.format(clockwise ? 2 : 3), xOutput.format(x), yOutput.format(y), zOutput.format(z), iOutput.format(cx - start.x, 0), kOutput.format(cz - start.z, 0), getFeed(feed));
       break;
     case PLANE_YZ:
       if (machineState.usePolarMode) {
@@ -2939,7 +2943,8 @@ function onCircular(clockwise, cx, cy, cz, x, y, z, feed) {
         linearize(tolerance);
         return;
       }
-      writeBlock(gPlaneModal.format(18), gMotionModal.format(clockwise ? 2 : 3), xOutput.format(x), yOutput.format(y), zOutput.format(z), "R" + rFormat.format(r), getFeed(feed));
+      // G18 doesnt print because its default
+      writeBlock(gMotionModal.format(clockwise ? 2 : 3), xOutput.format(x), yOutput.format(y), zOutput.format(z), "R" + rFormat.format(r), getFeed(feed));
       break;
     case PLANE_YZ:
       if (machineState.usePolarMode) {
@@ -3934,7 +3939,6 @@ function onSectionEnd() {
   
   // Возвращаем оси в зависимости от типа инструмента
   if (hasNextSection()) {
-    //b
     writeln("");
     if (isSectionMilling && !isToolInCenterX0()) {
       // Для active tool возвращаем все оси Y, X, Z
