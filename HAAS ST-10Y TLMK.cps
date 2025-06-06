@@ -1828,11 +1828,12 @@ function onSection() {
     writeBlock(gPlaneModal.format(getPlane())); // take plane for milling
   }
 
-  // MULTI AXIS PREPARATION M15; G0 C0;
+  // M15; G0 C0;
+  // MULTI AXIS PREPARATION
   
   var abc = new Vector(0, 0, 0);
   if (machineConfiguration.isMultiAxisConfiguration()) {
-    if (machineState.isTurningOperation || machineState.axialCenterDrilling) {
+    if (machineState.isTurningOperation || machineState.axialCenterDrilling || isToolInCenterX0()) {
       if (gotBAxis) {
         // TAG: handle B-axis support for turning operations here
         writeBlock(gMotionModal.format(0), conditional(machineConfiguration.isMachineCoordinate(1), bOutput.format(getB(bAxisOrientationTurning, currentSection))));
@@ -1925,14 +1926,9 @@ function onSection() {
   }
 
 
-  
-
-  
+  // /M8
   // set coolant after we have positioned at Z and X
-  setCoolant(tool.coolant); // /M8
-
-
-
+  setCoolant(tool.coolant); 
 
 
   // enable SFM spindle speed
